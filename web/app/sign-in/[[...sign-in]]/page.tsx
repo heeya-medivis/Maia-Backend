@@ -43,14 +43,19 @@ function SignInContent() {
     }
   }, [deviceId]);
 
-  // If already signed in and we have a device_id (and not doing fresh login), redirect to complete
-  // Skip if we're in the middle of signing out to prevent race condition
+  // If already signed in and NO device_id, redirect to home (normal web login)
+  // When device_id is present (Unity login), user must always complete sign-in explicitly
+  // to prevent auto-login from cached browser sessions
   useEffect(() => {
-    if (isSignedIn && deviceId && fresh !== "true" && !isSigningOut) {
-      sessionStorage.removeItem("pending_device_id");
-      router.push(`/auth/complete?device_id=${deviceId}`);
+    if (isSignedIn && !deviceId && !isSigningOut) {
+      router.push("/");
     }
-  }, [isSignedIn, deviceId, fresh, router, isSigningOut]);
+  }, [isSignedIn, deviceId, router, isSigningOut]);
+
+  // Don't render SignIn component while signing out or if we need to sign out first
+  // This prevents Clerk from auto-detecting an existing session
+  const needsSignOut = fresh === "true" && isSignedIn;
+  const showSignIn = !isSigningOut && !needsSignOut;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
@@ -59,16 +64,20 @@ function SignInContent() {
         <p className="text-slate-400">Sign in to continue</p>
       </div>
 
-      <SignIn
-        appearance={{
-          elements: {
-            rootBox: "mx-auto",
-            card: "bg-slate-800 border-slate-700",
-            footerAction: "hidden", // Hide Clerk's "Don't have an account? Sign up" link
-          },
-        }}
-        forceRedirectUrl={deviceId ? `/auth/complete?device_id=${deviceId}` : "/"}
-      />
+      {!showSignIn ? (
+        <div className="text-white">Preparing sign in...</div>
+      ) : (
+        <SignIn
+          appearance={{
+            elements: {
+              rootBox: "mx-auto",
+              card: "bg-slate-800 border-slate-700",
+              footerAction: "hidden", // Hide Clerk's "Don't have an account? Sign up" link
+            },
+          }}
+          forceRedirectUrl={deviceId ? `/auth/complete?device_id=${deviceId}` : "/"}
+        />
+      )}
 
       {/* Custom sign-up link that preserves device_id */}
       <p className="mt-6 text-sm text-slate-400">
