@@ -35,7 +35,8 @@ app.use(
       if (!origin) return "*";
 
       const allowedOrigins = [
-        env.APP_URL,
+        env.API_URL,
+        env.WEB_URL,
         "https://surgicalar.com",
         "https://*.surgicalar.com",
       ];

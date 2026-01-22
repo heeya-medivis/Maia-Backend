@@ -51,7 +51,7 @@ auth.post("/handoff/initiate", zValidator("json", initiateSchema), async (c) => 
   await cleanupDeviceHandoffCodes(deviceId);
 
   // Generate the auth URL - this page will handle Clerk auth
-  const authUrl = `${env.APP_URL}/auth/login?device_id=${encodeURIComponent(deviceId)}`;
+  const authUrl = `${env.API_URL}/auth/login?device_id=${encodeURIComponent(deviceId)}`;
 
   return c.json({
     success: true,
@@ -121,177 +121,17 @@ auth.get("/login", async (c) => {
   return c.redirect(signInUrl);
 });
 
-// GET /auth/complete - Called after Clerk auth, creates handoff code
+// GET /auth/complete - Redirect to Next.js frontend (kept for backwards compatibility)
 auth.get("/complete", async (c) => {
   const deviceId = c.req.query("device_id");
+  const webUrl = env.WEB_URL || "http://localhost:3001";
 
   if (!deviceId) {
-    return c.html(`
-      <!DOCTYPE html>
-      <html>
-        <head><title>Error</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-          <h1>Missing device ID</h1>
-          <p>Authentication failed. Please try again from the app.</p>
-        </body>
-      </html>
-    `);
+    return c.redirect(`${webUrl}/auth/complete?error=missing_device_id`);
   }
 
-  // Serve a page that will get the Clerk session and complete the handoff
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Completing Sign In - SurgicalAR</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-          * { box-sizing: border-box; }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: white;
-          }
-          .container {
-            text-align: center;
-            padding: 2rem;
-            max-width: 400px;
-          }
-          h1 { margin-bottom: 0.5rem; }
-          .status { color: #aaa; margin: 2rem 0; }
-          .success {
-            background: #10b981;
-            padding: 2rem;
-            border-radius: 12px;
-            display: none;
-          }
-          .success h2 { margin-top: 0; }
-          .error {
-            background: #ef4444;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-            display: none;
-          }
-          .spinner {
-            border: 3px solid #333;
-            border-top: 3px solid #10b981;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>SurgicalAR</h1>
-
-          <div id="loading">
-            <div class="spinner"></div>
-            <p class="status">Completing sign in...</p>
-          </div>
-
-          <div id="success" class="success">
-            <h2>Success!</h2>
-            <p>You can now close this window and return to SurgicalAR.</p>
-            <p>The app will automatically log you in.</p>
-          </div>
-
-          <div id="error" class="error"></div>
-        </div>
-
-        <script>
-          const deviceId = "${deviceId}";
-          const backendUrl = "${env.APP_URL}";
-          const clerkPubKey = "${env.CLERK_PUBLISHABLE_KEY}";
-        </script>
-        <script>
-          // Load Clerk JS to get the session token
-          (function() {
-            const script = document.createElement('script');
-            script.setAttribute('data-clerk-publishable-key', clerkPubKey);
-            script.async = true;
-            script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-            script.crossOrigin = 'anonymous';
-            script.onload = initClerk;
-            script.onerror = function() {
-              showError('Failed to load authentication library');
-            };
-            document.head.appendChild(script);
-          })();
-
-          async function initClerk() {
-            try {
-              const Clerk = window.Clerk;
-              if (!Clerk) {
-                throw new Error('Clerk not available');
-              }
-
-              await Clerk.load();
-
-              // Check if user is signed in
-              if (!Clerk.user || !Clerk.session) {
-                throw new Error('Not signed in. Please try again.');
-              }
-
-              // Get the session token
-              const token = await Clerk.session.getToken();
-              if (!token) {
-                throw new Error('Could not get session token');
-              }
-
-              // Call our callback endpoint to create handoff code
-              const response = await fetch(backendUrl + '/auth/callback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  deviceId: deviceId,
-                  clerkSessionToken: token
-                })
-              });
-
-              const data = await response.json();
-
-              if (data.success) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('success').style.display = 'block';
-
-                // Try deep link redirect after a short delay
-                const deepLink = data.deepLink;
-                if (deepLink) {
-                  setTimeout(() => { window.location.href = deepLink; }, 1500);
-                }
-              } else {
-                throw new Error(data.error || 'Authentication failed');
-              }
-            } catch (err) {
-              console.error('Auth completion error:', err);
-              showError(err.message || 'Authentication failed');
-            }
-          }
-
-          function showError(message) {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').textContent = message;
-            document.getElementById('error').style.display = 'block';
-          }
-        </script>
-      </body>
-    </html>
-  `;
-
-  return c.html(html);
+  // Redirect to Next.js frontend which handles the actual auth completion
+  return c.redirect(`${webUrl}/auth/complete?device_id=${encodeURIComponent(deviceId)}`);
 });
 
 // Schema for callback request (from browser after Clerk auth)

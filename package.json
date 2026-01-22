@@ -1,38 +1,28 @@
 {
-  "name": "maia-backend",
+  "name": "maia",
   "version": "1.0.0",
-  "description": "Maia backend for SurgicalAR - Clerk auth, credits, entitlements, and AI proxy",
-  "main": "dist/index.js",
-  "type": "module",
+  "private": true,
+  "description": "Maia - SurgicalAR Backend & Web Frontend",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
-  },
-  "dependencies": {
-    "@clerk/backend": "^1.21.0",
-    "@hono/node-server": "^1.13.7",
-    "@hono/zod-validator": "^0.4.2",
-    "dotenv": "^17.2.3",
-    "drizzle-orm": "^0.38.3",
-    "hono": "^4.6.14",
-    "jose": "^5.9.6",
-    "nanoid": "^5.0.9",
-    "postgres": "^3.4.5",
-    "svix": "^1.42.0",
-    "zod": "^3.24.1"
+    "dev": "dotenv -e .env -- concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "dotenv -e .env -- npm run dev --prefix api",
+    "dev:web": "dotenv -e .env -- npm run dev --prefix web",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "npm run build --prefix api",
+    "build:web": "npm run build --prefix web",
+    "start:api": "npm run start --prefix api",
+    "start:web": "npm run start --prefix web",
+    "db:generate": "npm run db:generate --prefix api",
+    "db:migrate": "npm run db:migrate --prefix api",
+    "db:push": "npm run db:push --prefix api",
+    "db:studio": "npm run db:studio --prefix api",
+    "typecheck": "npm run typecheck --prefix api",
+    "lint": "npm run lint --prefix api && npm run lint --prefix web",
+    "install:all": "npm install && cd api && npm install && cd ../web && npm install"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "drizzle-kit": "^0.30.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "concurrently": "^9.1.0",
+    "dotenv-cli": "^11.0.0"
   },
   "engines": {
     "node": ">=20"

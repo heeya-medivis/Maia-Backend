@@ -2,19 +2,36 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 
 function AuthCompleteContent() {
   const { isSignedIn, getToken } = useAuth();
   const searchParams = useSearchParams();
   const deviceId = searchParams.get("device_id");
+  const error = searchParams.get("error");
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [deepLink, setDeepLink] = useState<string>("");
+  
+  // Prevent double-calls from React Strict Mode
+  const hasCalledRef = useRef(false);
 
   useEffect(() => {
+    // Handle error from redirect
+    if (error) {
+      setStatus("error");
+      setErrorMessage(error === "missing_device_id" 
+        ? "Missing device ID. Please try again from the app."
+        : "Authentication failed. Please try again.");
+      return;
+    }
+
     async function completeAuth() {
+      // Prevent duplicate calls
+      if (hasCalledRef.current) return;
+      hasCalledRef.current = true;
+
       if (!isSignedIn) {
         setStatus("error");
         setErrorMessage("Not signed in. Please sign in first.");
@@ -72,10 +89,10 @@ function AuthCompleteContent() {
       }
     }
 
-    if (isSignedIn) {
+    if (isSignedIn && !error) {
       completeAuth();
     }
-  }, [isSignedIn, deviceId, getToken]);
+  }, [isSignedIn, deviceId, getToken, error]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">

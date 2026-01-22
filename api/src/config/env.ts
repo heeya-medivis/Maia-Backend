@@ -4,7 +4,8 @@ import { z } from "zod";
 const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  PORT: z.coerce.number().default(3000),
+  API_PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().optional(), // Fallback for legacy configs
 
   // Database
   DATABASE_URL: z.string().url(),
@@ -33,8 +34,8 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
-  // App
-  APP_URL: z.string().url().default("https://maia.surgicalar.com"),
+  // URLs (from .env.shared)
+  API_URL: z.string().url().default("http://localhost:3000"),
   WEB_URL: z.string().url().default("http://localhost:3001"),
   DEEP_LINK_SCHEME: z.string().default("maia"),
 });
@@ -54,3 +55,6 @@ function loadEnv(): Env {
 }
 
 export const env = loadEnv();
+
+// Prefer API_PORT, fallback to PORT for legacy configs
+export const serverPort = env.API_PORT ?? env.PORT ?? 3000;
