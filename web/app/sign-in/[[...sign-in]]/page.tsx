@@ -9,6 +9,7 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const deviceId = searchParams.get("device_id");
+  const pollToken = searchParams.get("poll_token");
   const fresh = searchParams.get("fresh"); // If "true", sign out first to allow different user
 
   // Track if we're signing out to prevent race condition
@@ -21,10 +22,11 @@ function SignInContent() {
       signOut().then(() => {
         // Don't set isSigningOut to false here - wait until isSignedIn becomes false
         // Remove the fresh param and reload
-        const newUrl = deviceId
-          ? `/sign-in?device_id=${deviceId}`
-          : "/sign-in";
-        router.replace(newUrl);
+        let newUrl = `/sign-in?device_id=${deviceId}`;
+        if (pollToken) {
+          newUrl += `&poll_token=${pollToken}`;
+        }
+        router.replace(deviceId ? newUrl : "/sign-in");
       });
     }
   }, [fresh, isSignedIn, signOut, deviceId, router, isSigningOut]);
@@ -36,12 +38,15 @@ function SignInContent() {
     }
   }, [isSigningOut, isSignedIn]);
 
-  // Save device_id to sessionStorage so home page can pick it up after Clerk redirect
+  // Save device_id and poll_token to sessionStorage so home page can pick it up after Clerk redirect
   useEffect(() => {
     if (deviceId) {
       sessionStorage.setItem("pending_device_id", deviceId);
     }
-  }, [deviceId]);
+    if (pollToken) {
+      sessionStorage.setItem("pending_poll_token", pollToken);
+    }
+  }, [deviceId, pollToken]);
 
   // If already signed in and NO device_id, redirect to home (normal web login)
   // When device_id is present (Unity login), user must always complete sign-in explicitly
@@ -75,15 +80,21 @@ function SignInContent() {
               footerAction: "hidden", // Hide Clerk's "Don't have an account? Sign up" link
             },
           }}
-          forceRedirectUrl={deviceId ? `/auth/complete?device_id=${deviceId}` : "/"}
+          forceRedirectUrl={deviceId 
+            ? `/auth/complete?device_id=${deviceId}${pollToken ? `&poll_token=${pollToken}` : ''}`
+            : "/"
+          }
         />
       )}
 
-      {/* Custom sign-up link that preserves device_id */}
+      {/* Custom sign-up link that preserves device_id and poll_token */}
       <p className="mt-6 text-sm text-slate-400">
         Don&apos;t have an account?{" "}
         <a
-          href={deviceId ? `/sign-up?device_id=${deviceId}` : "/sign-up"}
+          href={deviceId 
+            ? `/sign-up?device_id=${deviceId}${pollToken ? `&poll_token=${pollToken}` : ''}`
+            : "/sign-up"
+          }
           className="text-emerald-400 hover:text-emerald-300 underline"
         >
           Sign up

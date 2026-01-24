@@ -19,8 +19,10 @@ import { HandoffService } from '../services/handoff.service';
 import { SessionService } from '../services/session.service';
 import { DevicesRepository } from '../repositories/devices.repository';
 import { UsersRepository } from '../../users/users.repository';
-import { ClerkAuthGuard } from '../guards/clerk-auth.guard';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
+import { CurrentSession, SessionInfo } from '../decorators/current-session.decorator';
+import { User } from '../../../database/schema';
 import {
   InitiateHandoffDto,
   CallbackDto,
@@ -34,12 +36,6 @@ import {
 } from '../dto/auth.dto';
 
 const DEVICE_ID_HEADER = 'X-Device-ID';
-
-interface AuthUser {
-  id: string;
-  sessionId: string;
-  deviceId: string;
-}
 
 @Controller('auth')
 export class AuthController {
@@ -75,13 +71,20 @@ export class AuthController {
     // Clean up any existing unused handoff codes for this device
     await this.handoffService.cleanupDeviceHandoffCodes(deviceId);
 
-    // Generate the auth URL - this page will handle Clerk auth
-    const authUrl = `${this.apiUrl}/auth/login?device_id=${encodeURIComponent(deviceId)}`;
+    // Generate a poll token that Unity will use when polling
+    // This is stored temporarily and validated against the handoff code created by callback
+    const { nanoid } = await import('nanoid');
+    const pollToken = nanoid(32);
+
+    // Store the poll token expectation (will be validated when callback creates handoff code)
+    // For now, we'll pass it through the auth URL so the browser can include it in callback
+    const authUrl = `${this.apiUrl}/auth/login?device_id=${encodeURIComponent(deviceId)}&poll_token=${encodeURIComponent(pollToken)}`;
 
     return {
       success: true,
       authUrl,
       deviceId,
+      pollToken, // Unity stores this and provides it when polling
       message: 'Open authUrl in browser to authenticate',
     };
   }
@@ -89,17 +92,27 @@ export class AuthController {
   /**
    * GET /auth/handoff/poll
    * Unity polls this to check if auth is complete
+   * Requires poll_token to prevent device_id enumeration attacks
    */
   @Get('handoff/poll')
   async pollHandoff(
     @Query('device_id') deviceId: string,
+    @Query('poll_token') pollToken: string,
   ): Promise<HandoffPollResponseDto> {
     if (!deviceId) {
       throw new BadRequestException('Missing device_id parameter');
     }
 
+    if (!pollToken) {
+      throw new BadRequestException('Missing poll_token parameter');
+    }
+
     // Look for a ready (unused, unexpired) handoff code for this device
-    const handoffCode = await this.handoffService.findUnusedByDeviceId(deviceId);
+    // Requires valid pollToken to prevent enumeration attacks
+    const handoffCode = await this.handoffService.findUnusedByDeviceIdWithPollToken({
+      deviceId,
+      pollToken,
+    });
 
     if (!handoffCode) {
       return {
@@ -131,6 +144,7 @@ export class AuthController {
   @Get('login')
   async login(
     @Query('device_id') deviceId: string,
+    @Query('poll_token') pollToken: string,
     @Res() res: Response,
   ): Promise<void> {
     if (!deviceId) {
@@ -140,7 +154,11 @@ export class AuthController {
 
     // Redirect to our Next.js frontend sign-in page
     // Always use fresh=true to sign out any existing Clerk session first
-    const signInUrl = `${this.webUrl}/sign-in?device_id=${encodeURIComponent(deviceId)}&fresh=true`;
+    // Pass through poll_token so it can be included in the callback
+    let signInUrl = `${this.webUrl}/sign-in?device_id=${encodeURIComponent(deviceId)}&fresh=true`;
+    if (pollToken) {
+      signInUrl += `&poll_token=${encodeURIComponent(pollToken)}`;
+    }
     res.redirect(signInUrl);
   }
 
@@ -169,7 +187,7 @@ export class AuthController {
   async callback(
     @Body() dto: CallbackDto,
   ): Promise<CallbackResponseDto> {
-    const { deviceId, clerkSessionToken } = dto;
+    const { deviceId, clerkSessionToken, pollToken } = dto;
 
     this.logger.log(`[auth/callback] Starting for deviceId: ${deviceId}`);
 
@@ -236,11 +254,12 @@ export class AuthController {
     // Clean up any existing unused handoff codes for this device
     await this.handoffService.cleanupDeviceHandoffCodes(deviceId);
 
-    // Create new handoff code
+    // Create new handoff code with poll token from handoff/initiate
     const result = await this.handoffService.createHandoffCode({
       userId: clerkSession.userId,
       deviceId,
       clerkSessionId: clerkSession.id,
+      pollToken, // Pass through the poll token from handoff/initiate
     });
 
     return {
@@ -349,17 +368,13 @@ export class AuthController {
    * Get current user info
    */
   @Get('me')
-  @UseGuards(ClerkAuthGuard)
-  async me(@CurrentUser() authUser: AuthUser): Promise<MeResponseDto> {
-    // Get full user info
-    const user = await this.usersRepository.findById(authUser.id);
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
+  @UseGuards(JwtAuthGuard)
+  async me(
+    @CurrentUser() user: User,
+    @CurrentSession() session: SessionInfo,
+  ): Promise<MeResponseDto> {
     // Get user's devices
-    const userDevices = await this.devicesRepository.findActiveByUserId(authUser.id);
+    const userDevices = await this.devicesRepository.findActiveByUserId(user.id);
 
     return {
       user: {
@@ -378,7 +393,7 @@ export class AuthController {
         lastActiveAt: d.lastActiveAt,
         isActive: d.isActive,
       })),
-      currentDeviceId: authUser.deviceId,
+      currentDeviceId: session.deviceId,
     };
   }
 
@@ -387,9 +402,13 @@ export class AuthController {
    * Invalidate current session
    */
   @Post('logout')
-  @UseGuards(ClerkAuthGuard)
-  async logout(@CurrentUser() authUser: AuthUser) {
-    await this.sessionService.revokeSession(authUser.sessionId);
+  @UseGuards(JwtAuthGuard)
+  async logout(
+    @CurrentUser() user: User,
+    @CurrentSession() session: SessionInfo,
+  ) {
+    this.logger.log(`[auth/logout] Revoking session ${session.sessionId} for user ${user.id}`);
+    await this.sessionService.revokeSession(session.sessionId);
 
     return {
       success: true,
@@ -402,9 +421,11 @@ export class AuthController {
    * Invalidate all sessions for user
    */
   @Post('logout-all')
-  @UseGuards(ClerkAuthGuard)
-  async logoutAll(@CurrentUser() authUser: AuthUser) {
-    const count = await this.sessionService.revokeAllUserSessions(authUser.id);
+  @UseGuards(JwtAuthGuard)
+  async logoutAll(@CurrentUser() user: User) {
+    this.logger.log(`[auth/logout-all] Revoking all sessions for user ${user.id}`);
+    const count = await this.sessionService.revokeAllUserSessions(user.id);
+    this.logger.log(`[auth/logout-all] Revoked ${count} sessions`);
 
     return {
       success: true,

@@ -2,6 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { nanoid } from 'nanoid';
 import * as jose from 'jose';
+import * as crypto from 'crypto';
 import { SessionRepository } from '../repositories/session.repository';
 import { DeviceInfoDto } from '../dto/auth.dto';
 
@@ -55,6 +56,13 @@ export class SessionService {
   }
 
   /**
+   * Hash a refresh token using SHA-256
+   */
+  private hashRefreshToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
    * Create a new session and return access/refresh tokens
    */
   async createSession(input: CreateSessionInput): Promise<SessionTokens> {
@@ -72,15 +80,17 @@ export class SessionService {
 
     const sessionId = nanoid();
     const refreshToken = nanoid(REFRESH_TOKEN_LENGTH);
+    const refreshTokenHash = this.hashRefreshToken(refreshToken);
     const expiresAt = new Date(Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000);
     const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
-    // Create session in database
+    // Create session in database (store hash, not plaintext)
     await this.sessionRepository.create({
       id: sessionId,
       userId: input.userId,
       deviceId: input.deviceId,
-      refreshToken,
+      refreshToken: refreshTokenHash, // Legacy field - now stores hash
+      refreshTokenHash, // New hashed field
       clerkSessionId: input.clerkSessionId ?? null,
       expiresAt,
       refreshExpiresAt,
@@ -107,11 +117,27 @@ export class SessionService {
 
   /**
    * Refresh an expired session
+   * Implements refresh token rotation with reuse detection
    */
   async refreshSession(input: RefreshSessionInput): Promise<SessionTokens> {
-    const session = await this.sessionRepository.findByRefreshToken(input.refreshToken);
+    const refreshTokenHash = this.hashRefreshToken(input.refreshToken);
+    
+    // First, check if this is the current refresh token
+    let session = await this.sessionRepository.findByRefreshTokenHash(refreshTokenHash);
 
     if (!session) {
+      // Check if this is a previously used refresh token (reuse attack detection)
+      session = await this.sessionRepository.findByPreviousRefreshTokenHash(refreshTokenHash);
+      
+      if (session) {
+        // SECURITY: Reuse detected! Revoke ALL sessions for this device
+        this.logger.warn(
+          `Refresh token reuse detected for session ${session.id}, device ${session.deviceId}. Revoking all device sessions.`,
+        );
+        await this.sessionRepository.revokeByDeviceId(session.deviceId);
+        throw new UnauthorizedException('Refresh token has been revoked due to suspected token theft');
+      }
+      
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -125,12 +151,15 @@ export class SessionService {
 
     // Generate new tokens
     const newRefreshToken = nanoid(REFRESH_TOKEN_LENGTH);
+    const newRefreshTokenHash = this.hashRefreshToken(newRefreshToken);
     const expiresAt = new Date(Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000);
     const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
-    // Update session with new tokens
+    // Update session with new tokens, keeping previous hash for reuse detection
     await this.sessionRepository.update(session.id, {
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshTokenHash, // Legacy field - now stores hash
+      refreshTokenHash: newRefreshTokenHash,
+      previousRefreshTokenHash: refreshTokenHash, // Store old hash for reuse detection
       expiresAt,
       refreshExpiresAt,
       lastActiveAt: new Date(),

@@ -7,7 +7,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ClerkAuthGuard } from '../../auth/guards/clerk-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { GCloudService } from './gcloud.service';
 import { User } from '../../../database/schema';
@@ -20,7 +20,7 @@ import { BadRequestException } from '../../../common/exceptions';
 @ApiTags('AI Providers')
 @ApiBearerAuth()
 @Controller('api/GCloud')
-@UseGuards(ClerkAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class GCloudController {
   constructor(private readonly gcloudService: GCloudService) {}
 

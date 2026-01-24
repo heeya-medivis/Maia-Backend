@@ -1,6 +1,7 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ClerkAuthGuard } from './guards/clerk-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { DatabaseModule } from '../../database';
 import { UsersModule } from '../users/users.module';
@@ -25,6 +26,7 @@ import { DevicesController } from './controllers/devices.controller';
   providers: [
     // Guards
     ClerkAuthGuard,
+    JwtAuthGuard,
     AdminGuard,
     // Repositories
     HandoffRepository,
@@ -36,6 +38,7 @@ import { DevicesController } from './controllers/devices.controller';
   ],
   exports: [
     ClerkAuthGuard,
+    JwtAuthGuard,
     AdminGuard,
     SessionService,
     HandoffService,

@@ -10,7 +10,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { ClerkAuthGuard } from '../guards/clerk-auth.guard';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { DevicesRepository } from '../repositories/devices.repository';
 import { SessionService } from '../services/session.service';
@@ -28,7 +28,7 @@ class UpdateDeviceDto {
 @ApiTags('Devices')
 @ApiBearerAuth()
 @Controller('devices')
-@UseGuards(ClerkAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class DevicesController {
   constructor(
     private readonly devicesRepository: DevicesRepository,

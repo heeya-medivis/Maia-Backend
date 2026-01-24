@@ -36,6 +36,30 @@ export class SessionRepository {
     return result ?? null;
   }
 
+  /**
+   * Find session by hashed refresh token (primary lookup method)
+   */
+  async findByRefreshTokenHash(refreshTokenHash: string): Promise<Session | null> {
+    const [result] = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.refreshTokenHash, refreshTokenHash))
+      .limit(1);
+    return result ?? null;
+  }
+
+  /**
+   * Find session by previous refresh token hash (for reuse detection)
+   */
+  async findByPreviousRefreshTokenHash(refreshTokenHash: string): Promise<Session | null> {
+    const [result] = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.previousRefreshTokenHash, refreshTokenHash))
+      .limit(1);
+    return result ?? null;
+  }
+
   async findActiveByUserAndDevice(userId: string, deviceId: string): Promise<Session | null> {
     const [result] = await this.db
       .select()

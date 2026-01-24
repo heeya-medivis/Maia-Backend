@@ -4,18 +4,21 @@ import { nanoid } from 'nanoid';
 import { HandoffRepository } from '../repositories/handoff.repository';
 import { DeviceHandoffCode } from '../../../database/schema';
 
-// Configuration
-const HANDOFF_CODE_LENGTH = 12;
+// Configuration - Security hardened values
+const HANDOFF_CODE_LENGTH = 21; // ~126 bits entropy (was 12)
+const POLL_TOKEN_LENGTH = 32; // ~192 bits entropy for poll secret
 const HANDOFF_CODE_EXPIRY_MINUTES = 5;
 
 export interface CreateHandoffCodeInput {
   userId: string;
   deviceId: string;
   clerkSessionId?: string;
+  pollToken?: string; // Optional: if provided, use this; otherwise generate new one
 }
 
 export interface CreateHandoffCodeResult {
   code: string;
+  pollToken: string; // Secret token Unity must provide when polling
   expiresAt: Date;
   deepLink: string;
 }
@@ -23,6 +26,11 @@ export interface CreateHandoffCodeResult {
 export interface ValidateHandoffCodeInput {
   code: string;
   deviceId: string;
+}
+
+export interface PollHandoffInput {
+  deviceId: string;
+  pollToken: string;
 }
 
 @Injectable()
@@ -42,10 +50,13 @@ export class HandoffService {
    */
   async createHandoffCode(input: CreateHandoffCodeInput): Promise<CreateHandoffCodeResult> {
     const code = nanoid(HANDOFF_CODE_LENGTH);
+    // Use provided pollToken or generate a new one
+    const pollToken = input.pollToken ?? nanoid(POLL_TOKEN_LENGTH);
     const expiresAt = new Date(Date.now() + HANDOFF_CODE_EXPIRY_MINUTES * 60 * 1000);
 
     await this.handoffRepository.create({
       code,
+      pollToken,
       userId: input.userId,
       deviceId: input.deviceId,
       clerkSessionId: input.clerkSessionId ?? null,
@@ -58,6 +69,7 @@ export class HandoffService {
 
     return {
       code,
+      pollToken,
       expiresAt,
       deepLink,
     };
@@ -122,6 +134,23 @@ export class HandoffService {
 
   /**
    * Find unused handoff code for a device (for polling)
+   * Requires pollToken to prevent device_id guessing attacks
+   */
+  async findUnusedByDeviceIdWithPollToken(input: PollHandoffInput): Promise<DeviceHandoffCode | null> {
+    const handoffCode = await this.handoffRepository.findUnusedByDeviceId(input.deviceId);
+    
+    // Verify poll token matches (constant-time comparison would be ideal but nanoid is random enough)
+    if (handoffCode && handoffCode.pollToken !== input.pollToken) {
+      this.logger.warn(`Poll token mismatch for device ${input.deviceId}`);
+      return null; // Don't reveal that a code exists
+    }
+    
+    return handoffCode;
+  }
+
+  /**
+   * Find unused handoff code for a device (legacy - no poll token)
+   * @deprecated Use findUnusedByDeviceIdWithPollToken instead
    */
   async findUnusedByDeviceId(deviceId: string): Promise<DeviceHandoffCode | null> {
     return this.handoffRepository.findUnusedByDeviceId(deviceId);

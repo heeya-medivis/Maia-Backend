@@ -59,6 +59,12 @@ export class CallbackDto {
   @IsString()
   @MinLength(1)
   clerkSessionToken: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  @MaxLength(64)
+  pollToken?: string; // Poll token from handoff/initiate (for secure polling)
 }
 
 export class DeviceTokenDto {
@@ -82,6 +88,7 @@ export class HandoffInitiateResponseDto {
   success: boolean;
   authUrl: string;
   deviceId: string;
+  pollToken: string; // Secret token Unity must provide when polling
   message: string;
 }
 

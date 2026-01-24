@@ -1,5 +1,5 @@
 {
-  "id": "909a692f-800a-4a6a-af60-409e76c30696",
+  "id": "3aac5019-dd37-459d-9927-6e22f004c249",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -280,6 +280,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "poll_token": {
+          "name": "poll_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "user_id": {
           "name": "user_id",
           "type": "text",
@@ -361,6 +367,21 @@
           "columns": [
             {
               "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "handoff_codes_poll_token_idx": {
+          "name": "handoff_codes_poll_token_idx",
+          "columns": [
+            {
+              "expression": "poll_token",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1511,6 +1532,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "refresh_token_hash": {
+          "name": "refresh_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_refresh_token_hash": {
+          "name": "previous_refresh_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "clerk_session_id": {
           "name": "clerk_session_id",
           "type": "text",
@@ -1615,6 +1648,21 @@
           "method": "btree",
           "with": {}
         },
+        "sessions_refresh_token_hash_idx": {
+          "name": "sessions_refresh_token_hash_idx",
+          "columns": [
+            {
+              "expression": "refresh_token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "sessions_expires_idx": {
           "name": "sessions_expires_idx",
           "columns": [
@@ -1666,6 +1714,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "refresh_token"
+          ]
+        },
+        "sessions_refresh_token_hash_unique": {
+          "name": "sessions_refresh_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "refresh_token_hash"
           ]
         }
       },

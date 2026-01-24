@@ -29,6 +29,7 @@ CREATE TABLE "usage_events" (
 --> statement-breakpoint
 CREATE TABLE "device_handoff_codes" (
 	"code" text PRIMARY KEY NOT NULL,
+	"poll_token" text NOT NULL,
 	"user_id" text NOT NULL,
 	"device_id" text NOT NULL,
 	"clerk_session_id" text,
@@ -145,6 +146,8 @@ CREATE TABLE "sessions" (
 	"user_id" text NOT NULL,
 	"device_id" text NOT NULL,
 	"refresh_token" text NOT NULL,
+	"refresh_token_hash" text,
+	"previous_refresh_token_hash" text,
 	"clerk_session_id" text,
 	"expires_at" timestamp with time zone NOT NULL,
 	"refresh_expires_at" timestamp with time zone NOT NULL,
@@ -154,7 +157,8 @@ CREATE TABLE "sessions" (
 	"user_agent" text,
 	"created_date_time" timestamp with time zone DEFAULT now() NOT NULL,
 	"revoked_at" timestamp with time zone,
-	CONSTRAINT "sessions_refresh_token_unique" UNIQUE("refresh_token")
+	CONSTRAINT "sessions_refresh_token_unique" UNIQUE("refresh_token"),
+	CONSTRAINT "sessions_refresh_token_hash_unique" UNIQUE("refresh_token_hash")
 );
 --> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -188,6 +192,7 @@ CREATE INDEX "usage_events_created_idx" ON "usage_events" USING btree ("created_
 CREATE INDEX "handoff_codes_user_idx" ON "device_handoff_codes" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "handoff_codes_device_idx" ON "device_handoff_codes" USING btree ("device_id");--> statement-breakpoint
 CREATE INDEX "handoff_codes_expires_idx" ON "device_handoff_codes" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "handoff_codes_poll_token_idx" ON "device_handoff_codes" USING btree ("poll_token");--> statement-breakpoint
 CREATE INDEX "devices_user_idx" ON "devices" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "devices_active_idx" ON "devices" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "users_email_idx" ON "users" USING btree ("email");--> statement-breakpoint
@@ -208,4 +213,5 @@ CREATE INDEX "user_maia_access_active_idx" ON "user_maia_access" USING btree ("i
 CREATE INDEX "sessions_user_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_device_idx" ON "sessions" USING btree ("device_id");--> statement-breakpoint
 CREATE INDEX "sessions_refresh_token_idx" ON "sessions" USING btree ("refresh_token");--> statement-breakpoint
+CREATE INDEX "sessions_refresh_token_hash_idx" ON "sessions" USING btree ("refresh_token_hash");--> statement-breakpoint
 CREATE INDEX "sessions_expires_idx" ON "sessions" USING btree ("expires_at");

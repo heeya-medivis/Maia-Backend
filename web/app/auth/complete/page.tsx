@@ -8,11 +8,27 @@ function AuthCompleteContent() {
   const { isSignedIn, getToken } = useAuth();
   const searchParams = useSearchParams();
   const deviceId = searchParams.get("device_id");
+  const pollTokenFromUrl = searchParams.get("poll_token");
   const error = searchParams.get("error");
+
+  const [pollToken, setPollToken] = useState<string | null>(pollTokenFromUrl);
+  const [pollTokenLoaded, setPollTokenLoaded] = useState(!!pollTokenFromUrl);
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [deepLink, setDeepLink] = useState<string>("");
+
+  // Load pollToken from sessionStorage if not in URL (Clerk strips query params)
+  useEffect(() => {
+    if (!pollTokenFromUrl) {
+      const stored = sessionStorage.getItem("pending_poll_token");
+      if (stored) {
+        setPollToken(stored);
+        sessionStorage.removeItem("pending_poll_token");
+      }
+    }
+    setPollTokenLoaded(true);
+  }, [pollTokenFromUrl]);
   
   // Prevent double-calls from React Strict Mode
   const hasCalledRef = useRef(false);
@@ -24,6 +40,11 @@ function AuthCompleteContent() {
       setErrorMessage(error === "missing_device_id" 
         ? "Missing device ID. Please try again from the app."
         : "Authentication failed. Please try again.");
+      return;
+    }
+
+    // Wait for pollToken to be loaded from sessionStorage
+    if (!pollTokenLoaded) {
       return;
     }
 
@@ -44,6 +65,8 @@ function AuthCompleteContent() {
         return;
       }
 
+      console.log("[AuthComplete] Calling callback with pollToken:", pollToken);
+
       try {
         // Get the Clerk session token
         const token = await getToken();
@@ -59,6 +82,7 @@ function AuthCompleteContent() {
           body: JSON.stringify({
             deviceId: deviceId,
             clerkSessionToken: token,
+            pollToken: pollToken, // Required for secure polling
           }),
         });
 
@@ -92,7 +116,7 @@ function AuthCompleteContent() {
     if (isSignedIn && !error) {
       completeAuth();
     }
-  }, [isSignedIn, deviceId, getToken, error]);
+  }, [isSignedIn, deviceId, pollToken, pollTokenLoaded, getToken, error]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">

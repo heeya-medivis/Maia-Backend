@@ -9,21 +9,27 @@ function SignUpContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const deviceId = searchParams.get("device_id");
+  const pollToken = searchParams.get("poll_token");
 
-  // Save device_id to sessionStorage so home page can pick it up after Clerk redirect
+  // Save device_id and poll_token to sessionStorage so home page can pick it up after Clerk redirect
   useEffect(() => {
     if (deviceId) {
       sessionStorage.setItem("pending_device_id", deviceId);
     }
-  }, [deviceId]);
+    if (pollToken) {
+      sessionStorage.setItem("pending_poll_token", pollToken);
+    }
+  }, [deviceId, pollToken]);
 
   // If already signed in and we have a device_id, redirect to complete
   useEffect(() => {
     if (isSignedIn && deviceId) {
       sessionStorage.removeItem("pending_device_id");
-      router.push(`/auth/complete?device_id=${deviceId}`);
+      sessionStorage.removeItem("pending_poll_token");
+      const completeUrl = `/auth/complete?device_id=${deviceId}${pollToken ? `&poll_token=${pollToken}` : ''}`;
+      router.push(completeUrl);
     }
-  }, [isSignedIn, deviceId, router]);
+  }, [isSignedIn, deviceId, pollToken, router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
@@ -40,14 +46,20 @@ function SignUpContent() {
             footerAction: "hidden", // Hide Clerk's "Already have an account? Sign in" link
           },
         }}
-        forceRedirectUrl={deviceId ? `/auth/complete?device_id=${deviceId}` : "/"}
+        forceRedirectUrl={deviceId 
+          ? `/auth/complete?device_id=${deviceId}${pollToken ? `&poll_token=${pollToken}` : ''}`
+          : "/"
+        }
       />
 
-      {/* Custom sign-in link that preserves device_id */}
+      {/* Custom sign-in link that preserves device_id and poll_token */}
       <p className="mt-6 text-sm text-slate-400">
         Already have an account?{" "}
         <a
-          href={deviceId ? `/sign-in?device_id=${deviceId}` : "/sign-in"}
+          href={deviceId 
+            ? `/sign-in?device_id=${deviceId}${pollToken ? `&poll_token=${pollToken}` : ''}`
+            : "/sign-in"
+          }
           className="text-emerald-400 hover:text-emerald-300 underline"
         >
           Sign in
