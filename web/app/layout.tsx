@@ -1,15 +1,39 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
+// Monospace font for code
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// TT Commons Pro from Unity project
+const ttCommonsPro = localFont({
+  src: [
+    {
+      path: "../public/fonts/TTCommonsPro-Md.ttf",
+      weight: "400", // Using Medium as base
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/TTCommonsPro-Md.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/TTCommonsPro-Db.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/TTCommonsPro-Bd.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-tt-commons",
 });
 
 export const metadata: Metadata = {
@@ -25,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${ttCommonsPro.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>
