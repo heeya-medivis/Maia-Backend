@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { UnauthorizedException } from '../../../common/exceptions';
+import { type AuthUser } from '../../../common';
 import { SessionService } from '../services/session.service';
 import { DATABASE_CONNECTION, Database } from '../../../database';
 import { users } from '../../../database/schema';
@@ -15,6 +16,11 @@ import { eq, isNull, and } from 'drizzle-orm';
 /**
  * Guard that validates our own JWT access tokens.
  * Used for all authenticated endpoints called by Unity.
+ *
+ * Populates request.user with AuthUser containing:
+ * - User identity (id, email)
+ * - isSuperAdmin flag (from database)
+ * - Session/device info
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -70,8 +76,19 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('User not found', 'USER_NOT_FOUND');
       }
 
-      // Attach full user + session info to request
-      (request as any).user = user;
+      // Build AuthUser object
+      const authUser: AuthUser = {
+        id: user.id,
+        email: user.email,
+        isAdmin: user.isAdmin === true,
+        sessionId: payload.sid,
+        deviceId: payload.did,
+      };
+
+      // Attach AuthUser to request
+      (request as any).user = authUser;
+      // Also attach raw user for backwards compatibility
+      (request as any).dbUser = user;
       (request as any).session = {
         sessionId: payload.sid,
         deviceId: payload.did,

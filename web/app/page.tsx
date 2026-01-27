@@ -1,82 +1,49 @@
-"use client";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, Suspense } from "react";
+export default async function Home() {
+  const session = await getSession();
 
-function HomeContent() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Check for pending device auth (from Unity sign-up flow)
-  useEffect(() => {
-    if (isSignedIn && isLoaded) {
-      // Check if there's a device_id in sessionStorage (saved during sign-up)
-      const pendingDeviceId = sessionStorage.getItem("pending_device_id");
-      if (pendingDeviceId) {
-        sessionStorage.removeItem("pending_device_id");
-        router.push(`/auth/complete?device_id=${pendingDeviceId}`);
-        return;
-      }
-
-      // Also check URL params (in case redirect preserved it)
-      const deviceId = searchParams.get("device_id");
-      if (deviceId) {
-        router.push(`/auth/complete?device_id=${deviceId}`);
-        return;
-      }
+  // If user is signed in, redirect to appropriate dashboard
+  if (session) {
+    // Handle token expiration
+    if (session.accessTokenExpired) {
+      redirect("/api/auth/refresh");
     }
-  }, [isSignedIn, isLoaded, router, searchParams]);
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-        <div className="text-white">Loading...</div>
-      </div>
-    );
+    redirect("/user");
   }
 
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-        <h1 className="text-4xl font-bold text-white mb-4">MAIA</h1>
-        <p className="text-slate-400 mb-8">Medical imaging AI platform</p>
-        <div className="flex gap-4">
-          <button
-            onClick={() => router.push("/sign-in")}
-            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition-colors"
+  // Not signed in - show landing page
+  return (
+    <div className="min-h-screen bg-black grid-bg relative overflow-hidden flex flex-col items-center justify-center">
+      {/* Glowing orbs */}
+      <div className="glow-orb glow-orb-1" />
+      <div className="glow-orb glow-orb-2" />
+      
+      <div className="relative z-10 text-center">
+        <div className="inline-flex items-center gap-2.5 mb-4">
+          <div className="w-14 h-14 bg-[var(--accent)] rounded-[12px] flex items-center justify-center">
+            <span className="text-black font-bold text-[28px]">M</span>
+          </div>
+          <span className="text-[36px] font-bold tracking-tight">Maia</span>
+        </div>
+        <p className="text-[var(--muted)] mb-8 text-lg">Medical imaging AI platform</p>
+        <div className="flex gap-4 justify-center">
+          <Link
+            href="/login"
+            className="btn-primary"
           >
             Sign In
-          </button>
-          <button
-            onClick={() => router.push("/sign-up")}
-            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+          </Link>
+          <Link
+            href="/login"
+            className="btn-secondary"
           >
             Sign Up
-          </button>
+          </Link>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-      <h1 className="text-4xl font-bold text-white mb-4">MAIA</h1>
-      <p className="text-slate-400 mb-8">You are signed in!</p>
-      <UserButton afterSignOutUrl="/" />
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
-        <div className="text-white">Loading...</div>
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
   );
 }

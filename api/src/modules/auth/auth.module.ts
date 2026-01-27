@@ -1,48 +1,56 @@
-import { Module, Global } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ClerkAuthGuard } from './guards/clerk-auth.guard';
+import { Module, Global, OnModuleInit } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 import { DatabaseModule } from '../../database';
 import { UsersModule } from '../users/users.module';
+import { initializeJwt } from '../../utils/jwt';
 
 // Repositories
-import { HandoffRepository } from './repositories/handoff.repository';
 import { SessionRepository } from './repositories/session.repository';
 import { DevicesRepository } from './repositories/devices.repository';
+import { SsoRepository } from './repositories/sso.repository';
 
 // Services
-import { HandoffService } from './services/handoff.service';
 import { SessionService } from './services/session.service';
+import { WorkOSService } from './services/workos.service';
 
 // Controllers
 import { AuthController } from './controllers/auth.controller';
 import { DevicesController } from './controllers/devices.controller';
+import { OAuthController } from './controllers/oauth.controller';
+import { SsoController } from './controllers/sso.controller';
 
 @Global()
 @Module({
   imports: [DatabaseModule, ConfigModule, UsersModule],
-  controllers: [AuthController, DevicesController],
+  controllers: [AuthController, DevicesController, OAuthController, SsoController],
   providers: [
     // Guards
-    ClerkAuthGuard,
     JwtAuthGuard,
     AdminGuard,
     // Repositories
-    HandoffRepository,
     SessionRepository,
     DevicesRepository,
+    SsoRepository,
     // Services
-    HandoffService,
     SessionService,
+    WorkOSService,
   ],
   exports: [
-    ClerkAuthGuard,
     JwtAuthGuard,
     AdminGuard,
     SessionService,
-    HandoffService,
     DevicesRepository,
+    SsoRepository,
+    WorkOSService,
   ],
 })
-export class AuthModule {}
+export class AuthModule implements OnModuleInit {
+  constructor(private readonly configService: ConfigService) {}
+
+  onModuleInit() {
+    // Initialize JWT utilities with config service
+    initializeJwt(this.configService);
+  }
+}

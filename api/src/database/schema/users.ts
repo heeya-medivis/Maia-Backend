@@ -49,6 +49,10 @@ export const users = pgTable(
     // Clerk profile field (extended from original schema)
     imageUrl: text('image_url'),
 
+    // Admin flag - platform-level admin access
+    // Only Maia company employees should have this
+    isAdmin: boolean('is_admin').default(false).notNull(),
+
     // Tracking fields from ApplicationUser
     lastLoginDateTime: timestamp('last_login_date_time', { withTimezone: true }),
     lastVerificationEmailSentDateTime: timestamp(

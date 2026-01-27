@@ -14,12 +14,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { DevicesRepository } from '../repositories/devices.repository';
 import { SessionService } from '../services/session.service';
-
-interface AuthUser {
-  id: string;
-  sessionId: string;
-  deviceId: string;
-}
+import { type AuthUser } from '../../../common';
 
 class UpdateDeviceDto {
   name?: string;

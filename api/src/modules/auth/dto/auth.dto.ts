@@ -40,43 +40,6 @@ export class DeviceInfoDto {
   osVersion?: string;
 }
 
-export class InitiateHandoffDto {
-  @IsString()
-  @MinLength(8)
-  @MaxLength(64)
-  deviceId: string;
-
-  @IsOptional()
-  deviceInfo?: DeviceInfoDto;
-}
-
-export class CallbackDto {
-  @IsString()
-  @MinLength(8)
-  @MaxLength(64)
-  deviceId: string;
-
-  @IsString()
-  @MinLength(1)
-  clerkSessionToken: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(16)
-  @MaxLength(64)
-  pollToken?: string; // Poll token from handoff/initiate (for secure polling)
-}
-
-export class DeviceTokenDto {
-  @IsString()
-  @MinLength(8)
-  @MaxLength(24)
-  code: string;
-
-  @IsOptional()
-  deviceInfo?: DeviceInfoDto;
-}
-
 export class RefreshTokenDto {
   @IsString()
   @MinLength(16)
@@ -84,28 +47,6 @@ export class RefreshTokenDto {
 }
 
 // Response DTOs
-export class HandoffInitiateResponseDto {
-  success: boolean;
-  authUrl: string;
-  deviceId: string;
-  pollToken: string; // Secret token Unity must provide when polling
-  message: string;
-}
-
-export class HandoffPollResponseDto {
-  status: 'pending' | 'ready' | 'expired';
-  message?: string;
-  code?: string;
-  expiresAt?: string;
-}
-
-export class CallbackResponseDto {
-  success: boolean;
-  code: string;
-  deepLink: string;
-  expiresAt: string;
-}
-
 export class TokenResponseDto {
   success: boolean;
   accessToken: string;
@@ -129,6 +70,7 @@ export class MeResponseDto {
     lastName: string | null;
     imageUrl: string | null;
     emailVerified: boolean;
+    isAdmin: boolean;
   };
   devices: Array<{
     id: string;

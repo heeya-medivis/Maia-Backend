@@ -7,10 +7,11 @@ import {
 } from 'drizzle-orm/pg-core';
 import { users } from './users';
 import { devices } from './devices';
+import { authProtocolEnum } from './auth-connections';
 
 /**
  * Sessions table - JWT session tokens for authenticated devices
- * Stores refresh tokens and session metadata
+ * Uses refresh token rotation with family-based theft detection
  */
 export const sessions = pgTable(
   'sessions',
@@ -20,26 +21,34 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     deviceId: text('device_id')
-      .notNull()
       .references(() => devices.id, { onDelete: 'cascade' }),
-    refreshToken: text('refresh_token').notNull().unique(), // Deprecated: use refreshTokenHash
-    refreshTokenHash: text('refresh_token_hash').unique(), // SHA-256 hash of refresh token
-    previousRefreshTokenHash: text('previous_refresh_token_hash'), // For reuse detection
-    clerkSessionId: text('clerk_session_id'), // Link to Clerk session
+
+    // Refresh token (hashed for security)
+    refreshTokenHash: text('refresh_token_hash').notNull(),
+
+    // Token family for rotation detection (detects token reuse attacks)
+    refreshTokenFamilyId: text('refresh_token_family_id').notNull(),
+
+    // Auth context - how the user authenticated
+    authMethod: authProtocolEnum('auth_method').notNull(),
+
+    // Lifecycle
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-    refreshExpiresAt: timestamp('refresh_expires_at', { withTimezone: true }).notNull(),
-    isRevoked: boolean('is_revoked').default(false).notNull(),
-    lastActiveAt: timestamp('last_active_at', { withTimezone: true }).defaultNow(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokeReason: text('revoke_reason'), // 'logout', 'admin_revoke', 'rotation_reuse', 'expired'
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // Request metadata
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
-    createdDateTime: timestamp('created_date_time', { withTimezone: true }).defaultNow().notNull(),
-    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index('sessions_user_idx').on(table.userId),
     index('sessions_device_idx').on(table.deviceId),
-    index('sessions_refresh_token_idx').on(table.refreshToken),
     index('sessions_refresh_token_hash_idx').on(table.refreshTokenHash),
+    index('sessions_family_id_idx').on(table.refreshTokenFamilyId),
     index('sessions_expires_idx').on(table.expiresAt),
   ],
 );

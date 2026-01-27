@@ -1,3 +1,3 @@
 export * from './webhooks.module';
-export * from './clerk-webhook.controller';
-export * from './clerk-webhook.service';
+export * from './workos-webhook.controller';
+export * from './workos-webhook.service';

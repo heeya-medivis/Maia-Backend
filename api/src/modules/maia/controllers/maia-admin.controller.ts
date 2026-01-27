@@ -12,7 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { ClerkAuthGuard } from '../../auth/guards/clerk-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { MaiaModelsService } from '../services/maia-models.service';
@@ -29,7 +29,7 @@ import { User } from '../../../database/schema';
 @ApiTags('MAIA Admin')
 @ApiBearerAuth()
 @Controller('api/admin/maia')
-@UseGuards(ClerkAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class MaiaAdminController {
   constructor(
     private readonly modelsService: MaiaModelsService,

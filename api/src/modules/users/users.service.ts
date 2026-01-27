@@ -23,19 +23,42 @@ export class UsersService {
     return this.usersRepository.create(data);
   }
 
-  async upsertFromClerk(data: {
-    id: string;
+  /**
+   * Upsert user from WorkOS webhook/auth
+   * Uses email as the primary identifier since WorkOS user IDs are different
+   */
+  async upsertFromWorkOS(data: {
+    workosUserId: string;
     email: string;
     firstName?: string | null;
     lastName?: string | null;
     emailVerified?: boolean;
+    imageUrl?: string | null;
   }): Promise<User> {
-    return this.usersRepository.upsert({
-      id: data.id,
+    // Find existing user by email
+    const existingUser = await this.usersRepository.findByEmail(data.email);
+
+    if (existingUser) {
+      // Update existing user
+      const updated = await this.usersRepository.update(existingUser.id, {
+        firstName: data.firstName ?? existingUser.firstName,
+        lastName: data.lastName ?? existingUser.lastName,
+        emailConfirmed: data.emailVerified ?? existingUser.emailConfirmed,
+        imageUrl: data.imageUrl ?? existingUser.imageUrl,
+        deletedAt: null, // Reactivate if soft-deleted
+      });
+      return updated!;
+    }
+
+    // Create new user with nanoid as ID (not WorkOS ID)
+    const { nanoid } = await import('nanoid');
+    return this.usersRepository.create({
+      id: nanoid(),
       email: data.email,
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
       emailConfirmed: data.emailVerified ?? false,
+      imageUrl: data.imageUrl,
     });
   }
 
@@ -49,6 +72,16 @@ export class UsersService {
 
   async softDelete(id: string): Promise<void> {
     await this.usersRepository.softDelete(id);
+  }
+
+  /**
+   * Soft delete user by WorkOS user ID
+   * Looks up user by WorkOS ID in identities table
+   * 
+   * TODO: Implement lookup by workosUserId in identities table and soft delete the user
+   */
+  async softDeleteByWorkOSId(_workosUserId: string): Promise<void> {
+    // Not yet implemented - requires identity table lookup
   }
 
   async findAll(): Promise<User[]> {

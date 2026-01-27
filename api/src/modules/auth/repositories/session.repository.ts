@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, lt } from 'drizzle-orm';
+import { eq, and, lt, isNull, isNotNull } from 'drizzle-orm';
 import { DATABASE_CONNECTION, Database } from '../../../database';
 import { sessions, NewSession, Session } from '../../../database/schema';
 
@@ -27,15 +27,6 @@ export class SessionRepository {
     return result ?? null;
   }
 
-  async findByRefreshToken(refreshToken: string): Promise<Session | null> {
-    const [result] = await this.db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.refreshToken, refreshToken))
-      .limit(1);
-    return result ?? null;
-  }
-
   /**
    * Find session by hashed refresh token (primary lookup method)
    */
@@ -48,18 +39,6 @@ export class SessionRepository {
     return result ?? null;
   }
 
-  /**
-   * Find session by previous refresh token hash (for reuse detection)
-   */
-  async findByPreviousRefreshTokenHash(refreshTokenHash: string): Promise<Session | null> {
-    const [result] = await this.db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.previousRefreshTokenHash, refreshTokenHash))
-      .limit(1);
-    return result ?? null;
-  }
-
   async findActiveByUserAndDevice(userId: string, deviceId: string): Promise<Session | null> {
     const [result] = await this.db
       .select()
@@ -68,14 +47,14 @@ export class SessionRepository {
         and(
           eq(sessions.userId, userId),
           eq(sessions.deviceId, deviceId),
-          eq(sessions.isRevoked, false),
+          isNull(sessions.revokedAt),
         ),
       )
       .limit(1);
     return result ?? null;
   }
 
-  async update(id: string, data: Partial<Session>): Promise<Session | null> {
+  async update(id: string, data: Partial<Omit<Session, 'id' | 'createdAt'>>): Promise<Session | null> {
     const [result] = await this.db
       .update(sessions)
       .set(data)
@@ -84,21 +63,27 @@ export class SessionRepository {
     return result ?? null;
   }
 
-  async revoke(id: string): Promise<void> {
+  async revoke(id: string, reason: string = 'logout'): Promise<void> {
     await this.db
       .update(sessions)
-      .set({ isRevoked: true })
+      .set({ 
+        revokedAt: new Date(),
+        revokeReason: reason,
+      })
       .where(eq(sessions.id, id));
   }
 
   async revokeAllByUserId(userId: string): Promise<number> {
     const result = await this.db
       .update(sessions)
-      .set({ isRevoked: true })
+      .set({ 
+        revokedAt: new Date(),
+        revokeReason: 'logout_all',
+      })
       .where(
         and(
           eq(sessions.userId, userId),
-          eq(sessions.isRevoked, false),
+          isNull(sessions.revokedAt),
         ),
       )
       .returning({ id: sessions.id });
@@ -108,11 +93,14 @@ export class SessionRepository {
   async revokeByDeviceId(deviceId: string): Promise<number> {
     const result = await this.db
       .update(sessions)
-      .set({ isRevoked: true })
+      .set({ 
+        revokedAt: new Date(),
+        revokeReason: 'device_revoked',
+      })
       .where(
         and(
           eq(sessions.deviceId, deviceId),
-          eq(sessions.isRevoked, false),
+          isNull(sessions.revokedAt),
         ),
       )
       .returning({ id: sessions.id });
@@ -124,8 +112,8 @@ export class SessionRepository {
       .delete(sessions)
       .where(
         and(
-          eq(sessions.isRevoked, true),
-          lt(sessions.refreshExpiresAt, new Date()),
+          isNotNull(sessions.revokedAt),
+          lt(sessions.expiresAt, new Date()),
         ),
       )
       .returning({ id: sessions.id });

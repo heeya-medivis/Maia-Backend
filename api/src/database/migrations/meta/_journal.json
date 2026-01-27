@@ -5,8 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1769213337886,
-      "tag": "0000_spooky_sphinx",
+      "when": 1769466391095,
+      "tag": "0000_first_migration",
       "breakpoints": true
     }
   ]
