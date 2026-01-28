@@ -19,8 +19,8 @@ export class MaiaModelResponseDto {
   @ApiProperty()
   supportsDeepAnalysis: boolean;
 
-  @ApiPropertyOptional()
-  modelPriority?: number;
+  @ApiProperty({ description: 'Model priority for ordering. Defaults to MAX_SAFE_INTEGER if not set.' })
+  modelPriority: number;
 
   @ApiPropertyOptional()
   systemPrompt?: string;

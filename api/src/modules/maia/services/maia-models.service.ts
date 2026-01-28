@@ -63,7 +63,7 @@ export class MaiaModelsService {
         modelCategory: model.modelCategory,
         authenticationEndpoint: `${this.mapProviderToEndpoint(model.provider)}/Auth`,
         supportsDeepAnalysis: !!analysisPrompt,
-        modelPriority: model.modelPriority ?? undefined,
+        modelPriority: model.modelPriority ?? Number.MAX_SAFE_INTEGER,
         systemPrompt: systemPrompt?.content,
         analysisPrompt: analysisPrompt?.content,
         serverIp: host?.serverIp,
