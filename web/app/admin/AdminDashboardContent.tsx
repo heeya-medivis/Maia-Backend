@@ -94,7 +94,7 @@ export function AdminDashboardContent() {
                 <Bot className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <h3 className="font-medium">Maia Models</h3>
+                <h3 className="font-medium">Maia Management</h3>
                 <p className="text-sm text-[var(--muted)]">Configure AI models</p>
               </div>
             </div>

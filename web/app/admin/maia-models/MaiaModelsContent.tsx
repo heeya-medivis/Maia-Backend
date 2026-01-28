@@ -1,9 +1,9 @@
 'use client';
 
-import { Card, Button, Badge, Input, FormDialog, Select, Toggle } from '@/components/ui';
-import { Bot, Plus, Search, Settings, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Card, Button, Badge, Input, Select, Toggle } from '@/components/ui';
+import { Bot, Plus, Search, Settings, Trash2, Loader2, RefreshCw, X, Users, FileText, UserPlus, UserMinus } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { api, MaiaModel, MaiaOptions, ApiClientError, CreateMaiaModelInput } from '@/lib/api-client';
+import { api, MaiaModel, MaiaOptions, ApiClientError, CreateMaiaModelInput, MaiaUserAccess, AvailableUser } from '@/lib/api-client';
 
 const initialFormState: CreateMaiaModelInput = {
   modelName: '',
@@ -17,6 +17,8 @@ const initialFormState: CreateMaiaModelInput = {
   serverIp: undefined,
 };
 
+type DetailTab = 'details' | 'access';
+
 export function MaiaModelsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [models, setModels] = useState<MaiaModel[]>([]);
@@ -26,13 +28,20 @@ export function MaiaModelsContent() {
   // Options from backend
   const [options, setOptions] = useState<MaiaOptions | null>(null);
 
-  // Modal state (used for both create and edit)
-  const [showModal, setShowModal] = useState(false);
+  // Detail panel state
+  const [selectedModel, setSelectedModel] = useState<MaiaModel | null>(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('details');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<CreateMaiaModelInput>(initialFormState);
-  const [editingModelId, setEditingModelId] = useState<string | null>(null);
 
-  const isEditMode = editingModelId !== null;
+  // User access state
+  const [usersWithAccess, setUsersWithAccess] = useState<MaiaUserAccess[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [isLoadingAccess, setIsLoadingAccess] = useState(false);
+  const [selectedUserToAdd, setSelectedUserToAdd] = useState<string>('');
+
+  const isEditMode = selectedModel !== null;
 
   const fetchModels = async () => {
     setIsLoading(true);
@@ -51,11 +60,33 @@ export function MaiaModelsContent() {
     }
   };
 
+  const fetchUserAccess = useCallback(async (modelId: string) => {
+    setIsLoadingAccess(true);
+    try {
+      const [usersWithAccessData, availableUsersData] = await Promise.all([
+        api.getUsersWithAccess(modelId),
+        api.getAvailableUsers(modelId),
+      ]);
+      setUsersWithAccess(usersWithAccessData);
+      setAvailableUsers(availableUsersData);
+    } catch (err) {
+      console.error('Failed to fetch user access:', err);
+    } finally {
+      setIsLoadingAccess(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchModels();
-    // Fetch options once on mount
     api.getMaiaOptions().then(setOptions).catch(console.error);
   }, []);
+
+  // Fetch user access when switching to access tab or when model changes
+  useEffect(() => {
+    if (showDetailPanel && selectedModel && activeTab === 'access') {
+      fetchUserAccess(selectedModel.id);
+    }
+  }, [showDetailPanel, selectedModel, activeTab, fetchUserAccess]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this model?')) return;
@@ -63,6 +94,9 @@ export function MaiaModelsContent() {
     try {
       await api.deleteMaiaModel(id);
       setModels(models.filter(m => m.id !== id));
+      if (selectedModel?.id === id) {
+        handleClosePanel();
+      }
     } catch (err) {
       if (err instanceof ApiClientError) {
         alert(`Failed to delete: ${err.message}`);
@@ -70,21 +104,24 @@ export function MaiaModelsContent() {
     }
   };
 
-  const handleCloseModal = useCallback(() => {
-    setShowModal(false);
+  const handleClosePanel = useCallback(() => {
+    setShowDetailPanel(false);
+    setSelectedModel(null);
     setFormData(initialFormState);
-    setEditingModelId(null);
+    setActiveTab('details');
+    setUsersWithAccess([]);
+    setAvailableUsers([]);
+    setSelectedUserToAdd('');
   }, []);
 
   const handleOpenCreate = useCallback(() => {
+    setSelectedModel(null);
     setFormData(initialFormState);
-    setEditingModelId(null);
-    setShowModal(true);
+    setActiveTab('details');
+    setShowDetailPanel(true);
   }, []);
 
   const handleOpenEdit = useCallback((model: MaiaModel) => {
-    // Map model data to form data
-    // Need to convert db values back to numeric enum values
     const categoryMap: Record<string, number> = { balanced: 0, thinking: 1, live: 2 };
     const providerMap: Record<string, number> = { invalid: 0, gcloud: 1, openai: 2, self: 3 };
 
@@ -96,11 +133,12 @@ export function MaiaModelsContent() {
       modelPriority: model.modelPriority ?? undefined,
       pricing: model.pricing != null ? String(model.pricing) : undefined,
       isActive: model.isActive,
-      hostProvider: undefined, // Will be loaded if needed
-      serverIp: undefined, // Will be loaded if needed
+      hostProvider: undefined,
+      serverIp: undefined,
     });
-    setEditingModelId(model.id);
-    setShowModal(true);
+    setSelectedModel(model);
+    setActiveTab('details');
+    setShowDetailPanel(true);
   }, []);
 
   const handleCreate = useCallback(async () => {
@@ -108,8 +146,7 @@ export function MaiaModelsContent() {
     try {
       const newModel = await api.createMaiaModel(formData);
       setModels(prev => [...prev, newModel]);
-      setShowModal(false);
-      setFormData(initialFormState);
+      handleClosePanel();
     } catch (err) {
       if (err instanceof ApiClientError) {
         alert(`Failed to create model: ${err.message}`);
@@ -117,18 +154,16 @@ export function MaiaModelsContent() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData]);
+  }, [formData, handleClosePanel]);
 
   const handleUpdate = useCallback(async () => {
-    if (!editingModelId) return;
+    if (!selectedModel) return;
 
     setIsSubmitting(true);
     try {
-      const updatedModel = await api.updateMaiaModel(editingModelId, formData);
-      setModels(prev => prev.map(m => m.id === editingModelId ? updatedModel : m));
-      setShowModal(false);
-      setFormData(initialFormState);
-      setEditingModelId(null);
+      const updatedModel = await api.updateMaiaModel(selectedModel.id, formData);
+      setModels(prev => prev.map(m => m.id === selectedModel.id ? updatedModel : m));
+      setSelectedModel(updatedModel);
     } catch (err) {
       if (err instanceof ApiClientError) {
         alert(`Failed to update model: ${err.message}`);
@@ -136,7 +171,7 @@ export function MaiaModelsContent() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [editingModelId, formData]);
+  }, [selectedModel, formData]);
 
   const handleSubmit = useCallback(() => {
     if (isEditMode) {
@@ -152,6 +187,34 @@ export function MaiaModelsContent() {
   ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  const handleGrantAccess = useCallback(async () => {
+    if (!selectedModel || !selectedUserToAdd) return;
+
+    try {
+      await api.manageUserAccess(selectedModel.id, selectedUserToAdd, true);
+      setSelectedUserToAdd('');
+      fetchUserAccess(selectedModel.id);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to grant access: ${err.message}`);
+      }
+    }
+  }, [selectedModel, selectedUserToAdd, fetchUserAccess]);
+
+  const handleRevokeAccess = useCallback(async (userId: string) => {
+    if (!selectedModel) return;
+    if (!confirm('Are you sure you want to revoke access for this user?')) return;
+
+    try {
+      await api.manageUserAccess(selectedModel.id, userId, false);
+      fetchUserAccess(selectedModel.id);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to revoke access: ${err.message}`);
+      }
+    }
+  }, [selectedModel, fetchUserAccess]);
 
   const filteredModels = models.filter(model =>
     model.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -283,7 +346,7 @@ export function MaiaModelsContent() {
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" className="flex-1" onClick={() => handleOpenEdit(model)}>
                   <Settings className="w-4 h-4" />
-                  Edit
+                  Manage
                 </Button>
                 <Button
                   variant="ghost"
@@ -307,116 +370,308 @@ export function MaiaModelsContent() {
         </div>
       )}
 
-      {/* Create/Edit Model Modal */}
-      <FormDialog
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmit}
-        title={isEditMode ? 'Edit Model Details' : 'Add New Model'}
-        submitLabel={isEditMode ? 'Save Changes' : 'Create Model'}
-        isLoading={isSubmitting}
-        size="lg"
-      >
-        <div className="space-y-4">
-          {/* Model Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Model Name *</label>
-            <Input
-              placeholder="e.g., gpt-4o"
-              value={formData.modelName}
-              onChange={(e) => updateFormField('modelName', e.target.value)}
-            />
-            <p className="text-xs text-[var(--muted)] mt-1">Internal identifier used by the system</p>
-          </div>
+      {/* Detail Modal (Centered) */}
+      {showDetailPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={handleClosePanel}
+          />
 
-          {/* Display Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Display Name *</label>
-            <Input
-              placeholder="e.g., GPT-4 Omni"
-              value={formData.modelDisplayName}
-              onChange={(e) => updateFormField('modelDisplayName', e.target.value)}
-            />
-            <p className="text-xs text-[var(--muted)] mt-1">User-friendly name shown in the app</p>
-          </div>
-
-          {/* Category & Provider Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Category *</label>
-              <Select
-                options={options?.categories.map(c => ({ value: String(c.value), label: c.label })) ?? []}
-                value={String(formData.modelCategory)}
-                onChange={(val) => updateFormField('modelCategory', parseInt(val))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Provider *</label>
-              <Select
-                options={options?.providers.map(p => ({ value: String(p.value), label: p.label })) ?? []}
-                value={String(formData.provider)}
-                onChange={(val) => updateFormField('provider', parseInt(val))}
-              />
-            </div>
-          </div>
-
-          {/* Priority & Pricing Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Priority</label>
-              <Input
-                type="number"
-                placeholder="e.g., 1"
-                value={formData.modelPriority?.toString() ?? ''}
-                onChange={(e) => updateFormField('modelPriority', e.target.value ? parseInt(e.target.value) : undefined)}
-              />
-              <p className="text-xs text-[var(--muted)] mt-1">Lower = higher priority</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Pricing</label>
-              <Input
-                type="text"
-                placeholder="e.g., 0.01"
-                value={formData.pricing ?? ''}
-                onChange={(e) => updateFormField('pricing', e.target.value || undefined)}
-              />
-              <p className="text-xs text-[var(--muted)] mt-1">Cost per request/token</p>
-            </div>
-          </div>
-
-          {/* Self-hosted fields (only show when provider is self-hosted) */}
-          {formData.provider === 3 && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-[var(--card-hover)] rounded-lg">
-              <div>
-                <label className="block text-sm font-medium mb-1">Host Provider</label>
-                <Select
-                  options={options?.hostProviders.map(h => ({ value: String(h.value), label: h.label })) ?? []}
-                  value={formData.hostProvider?.toString() ?? ''}
-                  onChange={(val) => updateFormField('hostProvider', parseInt(val))}
-                  placeholder="Select provider"
-                />
+          {/* Modal */}
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden flex flex-col animate-scale-in">
+            {/* Header */}
+            <div className="flex items-start justify-between p-6 border-b border-[var(--border)]">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                  <Bot className="w-7 h-7 text-purple-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold">
+                      {isEditMode ? selectedModel?.modelDisplayName : 'Add New Model'}
+                    </h2>
+                    {isEditMode && selectedModel && (
+                      <Badge variant={selectedModel.isActive ? 'success' : 'default'}>
+                        {selectedModel.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-[var(--muted)] mt-1">
+                    {isEditMode ? (
+                      <>
+                        <code className="bg-[var(--card-hover)] px-2 py-0.5 rounded text-xs mr-2">
+                          {selectedModel?.modelName}
+                        </code>
+                        {getProviderLabel(selectedModel?.provider || '')}
+                      </>
+                    ) : (
+                      'Create a new AI model configuration'
+                    )}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Server IP</label>
-                <Input
-                  placeholder="e.g., 192.168.1.100"
-                  value={formData.serverIp ?? ''}
-                  onChange={(e) => updateFormField('serverIp', e.target.value || undefined)}
-                />
-              </div>
+              <Button variant="ghost" size="sm" onClick={handleClosePanel}>
+                <X className="w-5 h-5" />
+              </Button>
             </div>
-          )}
 
-          {/* Active Toggle */}
-          <div className="pt-2">
-            <Toggle
-              checked={formData.isActive ?? true}
-              onChange={(checked) => updateFormField('isActive', checked)}
-              label="Model is active"
-            />
+            {/* Tabs (only show in edit mode) */}
+            {isEditMode && (
+              <div className="border-b border-[var(--border)] px-6">
+                <div className="flex gap-6">
+                  <button
+                    onClick={() => setActiveTab('details')}
+                    className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'details'
+                        ? 'border-[var(--accent)] text-white'
+                        : 'border-transparent text-[var(--muted)] hover:text-white'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 inline-block mr-2" />
+                    Model Details
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('access')}
+                    className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'access'
+                        ? 'border-[var(--accent)] text-white'
+                        : 'border-transparent text-[var(--muted)] hover:text-white'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 inline-block mr-2" />
+                    User Access
+                    {usersWithAccess.length > 0 && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-[var(--card-hover)] rounded text-xs">
+                        {usersWithAccess.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {activeTab === 'details' ? (
+                /* Model Details Form */
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Model Name *</label>
+                      <Input
+                        placeholder="e.g., gpt-4o"
+                        value={formData.modelName}
+                        onChange={(e) => updateFormField('modelName', e.target.value)}
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">Internal identifier used by the system</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Display Name *</label>
+                      <Input
+                        placeholder="e.g., GPT-4 Omni"
+                        value={formData.modelDisplayName}
+                        onChange={(e) => updateFormField('modelDisplayName', e.target.value)}
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">User-friendly name shown in the app</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Category *</label>
+                      <Select
+                        options={options?.categories.map(c => ({ value: String(c.value), label: c.label })) ?? []}
+                        value={String(formData.modelCategory)}
+                        onChange={(val) => updateFormField('modelCategory', parseInt(val))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Provider *</label>
+                      <Select
+                        options={options?.providers.map(p => ({ value: String(p.value), label: p.label })) ?? []}
+                        value={String(formData.provider)}
+                        onChange={(val) => updateFormField('provider', parseInt(val))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Priority</label>
+                      <Input
+                        type="number"
+                        placeholder="e.g., 1"
+                        value={formData.modelPriority?.toString() ?? ''}
+                        onChange={(e) => updateFormField('modelPriority', e.target.value ? parseInt(e.target.value) : undefined)}
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">Lower = higher priority</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Pricing</label>
+                      <Input
+                        type="text"
+                        placeholder="e.g., 0.01"
+                        value={formData.pricing ?? ''}
+                        onChange={(e) => updateFormField('pricing', e.target.value || undefined)}
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">Cost per request/token</p>
+                    </div>
+
+                    {formData.provider === 3 && (
+                      <div className="p-4 bg-[var(--card-hover)] rounded-lg space-y-4">
+                        <p className="text-sm font-medium">Self-Hosted Configuration</p>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Host Provider</label>
+                          <Select
+                            options={options?.hostProviders.map(h => ({ value: String(h.value), label: h.label })) ?? []}
+                            value={formData.hostProvider?.toString() ?? ''}
+                            onChange={(val) => updateFormField('hostProvider', parseInt(val))}
+                            placeholder="Select provider"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Server IP</label>
+                          <Input
+                            placeholder="e.g., 192.168.1.100"
+                            value={formData.serverIp ?? ''}
+                            onChange={(e) => updateFormField('serverIp', e.target.value || undefined)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <Toggle
+                        checked={formData.isActive ?? true}
+                        onChange={(checked) => updateFormField('isActive', checked)}
+                        label="Model is active"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* User Access Tab */
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Add User Section */}
+                  <div>
+                    <div className="p-4 bg-[var(--card-hover)] rounded-lg">
+                      <h3 className="text-sm font-medium mb-3">Add User Access</h3>
+                      <div className="space-y-3">
+                        <Select
+                          options={availableUsers.map(u => ({ value: u.id, label: `${u.name} (${u.email})` }))}
+                          value={selectedUserToAdd}
+                          onChange={setSelectedUserToAdd}
+                          placeholder="Select a user..."
+                        />
+                        <Button
+                          variant="primary"
+                          onClick={handleGrantAccess}
+                          disabled={!selectedUserToAdd}
+                          className="w-full"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Grant Access
+                        </Button>
+                      </div>
+                      {availableUsers.length === 0 && !isLoadingAccess && (
+                        <p className="text-xs text-[var(--muted)] mt-3">All users already have access to this model.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Users with Access List */}
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Users with Access ({usersWithAccess.length})</h3>
+                    {isLoadingAccess ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+                      </div>
+                    ) : usersWithAccess.length === 0 ? (
+                      <div className="p-6 text-center border border-dashed border-[var(--border)] rounded-lg">
+                        <Users className="w-8 h-8 text-[var(--muted)] mx-auto mb-2" />
+                        <p className="text-sm text-[var(--muted)]">No users have access yet.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-80 overflow-auto">
+                        {usersWithAccess.map((user) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-[var(--accent-muted)] rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium text-[var(--accent)]">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{user.name}</p>
+                                <p className="text-xs text-[var(--muted)]">{user.email}</p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-[var(--danger)]"
+                              onClick={() => handleRevokeAccess(user.userId)}
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-[var(--border)] bg-[var(--card-hover)]">
+              <Button variant="ghost" onClick={handleClosePanel}>
+                Cancel
+              </Button>
+              {activeTab === 'details' && (
+                <Button
+                  variant="primary"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isEditMode ? 'Saving...' : 'Creating...'}
+                    </>
+                  ) : (
+                    isEditMode ? 'Save Changes' : 'Create Model'
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </FormDialog>
+      )}
+
+      <style jsx>{`
+        @keyframes scale-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

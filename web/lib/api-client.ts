@@ -123,6 +123,20 @@ export interface MaiaOptions {
   hostProviders: MaiaEnumOption[];
 }
 
+// User access types
+export interface MaiaUserAccess {
+  accessId: string;
+  userId: string;
+  name: string;
+  email: string;
+}
+
+export interface AvailableUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 // Legacy type for backwards compatibility
 export interface CurrentUser {
   user: {
@@ -269,6 +283,28 @@ class ApiClient {
     await this.request(`/admin/maia/models/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // ===========================================================================
+  // MAIA User Access Endpoints
+  // ===========================================================================
+
+  async getUsersWithAccess(modelId: string): Promise<MaiaUserAccess[]> {
+    const response = await this.request<MaiaUserAccess[]>(`/admin/maia/models/${modelId}/users`);
+    return response.data ?? [];
+  }
+
+  async getAvailableUsers(modelId: string): Promise<AvailableUser[]> {
+    const response = await this.request<AvailableUser[]>(`/admin/maia/models/${modelId}/available-users`);
+    return response.data ?? [];
+  }
+
+  async manageUserAccess(modelId: string, userId: string, grantAccess: boolean): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/admin/maia/models/${modelId}/access`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, grantAccess }),
+    });
+    return response.data!;
   }
 }
 
