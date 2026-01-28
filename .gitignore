@@ -37,3 +37,8 @@ drizzle/meta/
 # Misc
 *.tgz
 .cache/
+
+# RSA keys
+*.pem
+private.pem
+public.pem

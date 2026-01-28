@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p ${WEB_PORT:-3001}",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start -p ${WEB_PORT:-3001}",
+    "start": "next start -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.36.8",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
     "next": "^16.1.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
@@ -19,6 +20,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
     "tailwindcss": "^4",
