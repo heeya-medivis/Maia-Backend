@@ -216,6 +216,34 @@ export class MaiaAdminController {
     );
   }
 
+  // ========================
+  // Options Endpoint
+  // ========================
+
+  /**
+   * GET /api/admin/maia/options
+   * Get enum options for dropdowns
+   */
+  @Get('options')
+  @ApiOperation({ summary: 'Get MAIA enum options for forms' })
+  getOptions() {
+    return {
+      categories: [
+        { value: 0, label: 'Balanced', dbValue: 'balanced' },
+        { value: 1, label: 'Thinking', dbValue: 'thinking' },
+        { value: 2, label: 'Live', dbValue: 'live' },
+      ],
+      providers: [
+        { value: 1, label: 'Google Cloud', dbValue: 'gcloud' },
+        { value: 2, label: 'OpenAI', dbValue: 'openai' },
+        { value: 3, label: 'Self-Hosted', dbValue: 'self' },
+      ],
+      hostProviders: [
+        { value: 1, label: 'AWS EC2', dbValue: 'aws_ec2' },
+      ],
+    };
+  }
+
   // Helper methods for enum mapping
   private mapModelCategory(category: number): string {
     const map: Record<number, string> = {

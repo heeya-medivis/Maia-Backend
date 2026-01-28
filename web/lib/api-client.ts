@@ -102,13 +102,25 @@ export interface CreateMaiaModelInput {
   modelCategory: number; // 0=balanced, 1=thinking, 2=live
   provider: number; // 0=invalid, 1=gcloud, 2=openai, 3=self
   modelPriority?: number;
-  pricing?: number;
+  pricing?: string;
   isActive?: boolean;
   hostProvider?: number;
   serverIp?: string;
 }
 
 export interface UpdateMaiaModelInput extends Partial<CreateMaiaModelInput> {}
+
+export interface MaiaEnumOption {
+  value: number;
+  label: string;
+  dbValue: string;
+}
+
+export interface MaiaOptions {
+  categories: MaiaEnumOption[];
+  providers: MaiaEnumOption[];
+  hostProviders: MaiaEnumOption[];
+}
 
 // Legacy type for backwards compatibility
 export interface CurrentUser {
@@ -220,6 +232,11 @@ class ApiClient {
   // ===========================================================================
   // MAIA Admin Endpoints
   // ===========================================================================
+
+  async getMaiaOptions(): Promise<MaiaOptions> {
+    const response = await this.request<MaiaOptions>('/admin/maia/options');
+    return response.data!;
+  }
 
   async getMaiaModels(): Promise<MaiaModel[]> {
     const response = await this.request<MaiaModel[]>('/admin/maia/models');

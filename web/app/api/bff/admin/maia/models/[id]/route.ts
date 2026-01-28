@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const body = await request.json();
   const result = await bffFetch(`/api/admin/maia/models/${id}`, {
-    method: 'PATCH', // Backend uses PATCH
+    method: 'PUT',
     body,
   });
   return NextResponse.json(result, { status: result.status });
@@ -38,5 +38,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const result = await bffFetch(`/api/admin/maia/models/${id}`, {
     method: 'DELETE',
   });
+
+  // 204 No Content responses cannot have a body
+  if (result.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   return NextResponse.json(result, { status: result.status });
 }

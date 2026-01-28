@@ -1,15 +1,38 @@
 'use client';
 
-import { Card, Button, Badge, Input } from '@/components/ui';
+import { Card, Button, Badge, Input, FormDialog, Select, Toggle } from '@/components/ui';
 import { Bot, Plus, Search, Settings, Trash2, Loader2, RefreshCw } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { api, MaiaModel, ApiClientError } from '@/lib/api-client';
+import { useState, useEffect, useCallback } from 'react';
+import { api, MaiaModel, MaiaOptions, ApiClientError, CreateMaiaModelInput } from '@/lib/api-client';
+
+const initialFormState: CreateMaiaModelInput = {
+  modelName: '',
+  modelDisplayName: '',
+  modelCategory: 0,
+  provider: 2, // OpenAI default
+  modelPriority: undefined,
+  pricing: undefined,
+  isActive: true,
+  hostProvider: undefined,
+  serverIp: undefined,
+};
 
 export function MaiaModelsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [models, setModels] = useState<MaiaModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Options from backend
+  const [options, setOptions] = useState<MaiaOptions | null>(null);
+
+  // Modal state (used for both create and edit)
+  const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<CreateMaiaModelInput>(initialFormState);
+  const [editingModelId, setEditingModelId] = useState<string | null>(null);
+
+  const isEditMode = editingModelId !== null;
 
   const fetchModels = async () => {
     setIsLoading(true);
@@ -30,6 +53,8 @@ export function MaiaModelsContent() {
 
   useEffect(() => {
     fetchModels();
+    // Fetch options once on mount
+    api.getMaiaOptions().then(setOptions).catch(console.error);
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -44,6 +69,89 @@ export function MaiaModelsContent() {
       }
     }
   };
+
+  const handleCloseModal = useCallback(() => {
+    setShowModal(false);
+    setFormData(initialFormState);
+    setEditingModelId(null);
+  }, []);
+
+  const handleOpenCreate = useCallback(() => {
+    setFormData(initialFormState);
+    setEditingModelId(null);
+    setShowModal(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((model: MaiaModel) => {
+    // Map model data to form data
+    // Need to convert db values back to numeric enum values
+    const categoryMap: Record<string, number> = { balanced: 0, thinking: 1, live: 2 };
+    const providerMap: Record<string, number> = { invalid: 0, gcloud: 1, openai: 2, self: 3 };
+
+    setFormData({
+      modelName: model.modelName,
+      modelDisplayName: model.modelDisplayName,
+      modelCategory: categoryMap[model.modelCategory] ?? 0,
+      provider: providerMap[model.provider] ?? 2,
+      modelPriority: model.modelPriority ?? undefined,
+      pricing: model.pricing != null ? String(model.pricing) : undefined,
+      isActive: model.isActive,
+      hostProvider: undefined, // Will be loaded if needed
+      serverIp: undefined, // Will be loaded if needed
+    });
+    setEditingModelId(model.id);
+    setShowModal(true);
+  }, []);
+
+  const handleCreate = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const newModel = await api.createMaiaModel(formData);
+      setModels(prev => [...prev, newModel]);
+      setShowModal(false);
+      setFormData(initialFormState);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to create model: ${err.message}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [formData]);
+
+  const handleUpdate = useCallback(async () => {
+    if (!editingModelId) return;
+
+    setIsSubmitting(true);
+    try {
+      const updatedModel = await api.updateMaiaModel(editingModelId, formData);
+      setModels(prev => prev.map(m => m.id === editingModelId ? updatedModel : m));
+      setShowModal(false);
+      setFormData(initialFormState);
+      setEditingModelId(null);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to update model: ${err.message}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [editingModelId, formData]);
+
+  const handleSubmit = useCallback(() => {
+    if (isEditMode) {
+      handleUpdate();
+    } else {
+      handleCreate();
+    }
+  }, [isEditMode, handleUpdate, handleCreate]);
+
+  const updateFormField = useCallback(<K extends keyof CreateMaiaModelInput>(
+    field: K,
+    value: CreateMaiaModelInput[K]
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   const filteredModels = models.filter(model =>
     model.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -80,7 +188,7 @@ export function MaiaModelsContent() {
           <Button variant="ghost" onClick={fetchModels} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <Button variant="primary">
+          <Button variant="primary" onClick={handleOpenCreate}>
             <Plus className="w-4 h-4" />
             Add Model
           </Button>
@@ -125,7 +233,7 @@ export function MaiaModelsContent() {
               : 'Try a different search term.'}
           </p>
           {models.length === 0 && (
-            <Button variant="primary">
+            <Button variant="primary" onClick={handleOpenCreate}>
               <Plus className="w-4 h-4" />
               Add Model
             </Button>
@@ -166,9 +274,9 @@ export function MaiaModelsContent() {
               )}
 
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="flex-1">
+                <Button variant="ghost" size="sm" className="flex-1" onClick={() => handleOpenEdit(model)}>
                   <Settings className="w-4 h-4" />
-                  Configure
+                  Edit
                 </Button>
                 <Button
                   variant="ghost"
@@ -191,6 +299,117 @@ export function MaiaModelsContent() {
           <span>{models.filter(m => m.isActive).length} active</span>
         </div>
       )}
+
+      {/* Create/Edit Model Modal */}
+      <FormDialog
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+        title={isEditMode ? 'Edit Model Details' : 'Add New Model'}
+        submitLabel={isEditMode ? 'Save Changes' : 'Create Model'}
+        isLoading={isSubmitting}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Model Name */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Model Name *</label>
+            <Input
+              placeholder="e.g., gpt-4o"
+              value={formData.modelName}
+              onChange={(e) => updateFormField('modelName', e.target.value)}
+            />
+            <p className="text-xs text-[var(--muted)] mt-1">Internal identifier used by the system</p>
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Display Name *</label>
+            <Input
+              placeholder="e.g., GPT-4 Omni"
+              value={formData.modelDisplayName}
+              onChange={(e) => updateFormField('modelDisplayName', e.target.value)}
+            />
+            <p className="text-xs text-[var(--muted)] mt-1">User-friendly name shown in the app</p>
+          </div>
+
+          {/* Category & Provider Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Category *</label>
+              <Select
+                options={options?.categories.map(c => ({ value: String(c.value), label: c.label })) ?? []}
+                value={String(formData.modelCategory)}
+                onChange={(val) => updateFormField('modelCategory', parseInt(val))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Provider *</label>
+              <Select
+                options={options?.providers.map(p => ({ value: String(p.value), label: p.label })) ?? []}
+                value={String(formData.provider)}
+                onChange={(val) => updateFormField('provider', parseInt(val))}
+              />
+            </div>
+          </div>
+
+          {/* Priority & Pricing Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Priority</label>
+              <Input
+                type="number"
+                placeholder="e.g., 1"
+                value={formData.modelPriority?.toString() ?? ''}
+                onChange={(e) => updateFormField('modelPriority', e.target.value ? parseInt(e.target.value) : undefined)}
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">Lower = higher priority</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Pricing</label>
+              <Input
+                type="text"
+                placeholder="e.g., 0.01"
+                value={formData.pricing ?? ''}
+                onChange={(e) => updateFormField('pricing', e.target.value || undefined)}
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">Cost per request/token</p>
+            </div>
+          </div>
+
+          {/* Self-hosted fields (only show when provider is self-hosted) */}
+          {formData.provider === 3 && (
+            <div className="grid grid-cols-2 gap-4 p-4 bg-[var(--card-hover)] rounded-lg">
+              <div>
+                <label className="block text-sm font-medium mb-1">Host Provider</label>
+                <Select
+                  options={options?.hostProviders.map(h => ({ value: String(h.value), label: h.label })) ?? []}
+                  value={formData.hostProvider?.toString() ?? ''}
+                  onChange={(val) => updateFormField('hostProvider', parseInt(val))}
+                  placeholder="Select provider"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Server IP</label>
+                <Input
+                  placeholder="e.g., 192.168.1.100"
+                  value={formData.serverIp ?? ''}
+                  onChange={(e) => updateFormField('serverIp', e.target.value || undefined)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Active Toggle */}
+          <div className="pt-2">
+            <Toggle
+              checked={formData.isActive ?? true}
+              onChange={(checked) => updateFormField('isActive', checked)}
+              label="Model is active"
+            />
+          </div>
+        </div>
+      </FormDialog>
     </div>
   );
 }
