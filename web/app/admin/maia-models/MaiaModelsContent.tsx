@@ -268,8 +268,15 @@ export function MaiaModelsContent() {
               </div>
 
               {model.pricing > 0 && (
-                <p className="text-xs text-[var(--muted)] mb-3">
+                <p className="text-xs text-[var(--muted)] mb-1">
                   Pricing: ${model.pricing.toFixed(4)}
+                </p>
+              )}
+
+              {model.modifiedByName && (
+                <p className="text-xs text-[var(--muted)] mb-3">
+                  {model.modifiedDateTime ? 'Modified' : 'Created'} by {model.modifiedByName} on{' '}
+                  {new Date(model.modifiedDateTime ?? model.createdDateTime).toLocaleDateString()}
                 </p>
               )}
 

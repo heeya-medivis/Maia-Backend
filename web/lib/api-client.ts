@@ -73,6 +73,7 @@ export interface MaiaModel {
   isActive: boolean;
   createdDateTime: string;
   modifiedDateTime: string | null;
+  modifiedByName: string | null;
 }
 
 export interface MaiaPrompt {
