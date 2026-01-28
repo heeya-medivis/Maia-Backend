@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
   const provider = searchParams.get('provider') ?? 'google';
   const rawRedirect = searchParams.get('redirect') ?? '/user';
   const redirectTo = validateRedirect(rawRedirect);
+  const loginHint = searchParams.get('login_hint');
+  const connectionId = searchParams.get('connection_id');
 
   // Generate PKCE values
   const codeVerifier = generateRandomString(64);
@@ -62,12 +64,21 @@ export async function GET(request: NextRequest) {
   authorizeUrl.searchParams.set('state', state);
   authorizeUrl.searchParams.set('code_challenge', codeChallenge);
   authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-  authorizeUrl.searchParams.set('provider', provider);
+
+  if (connectionId) {
+    authorizeUrl.searchParams.set('connection_id', connectionId);
+  } else {
+    authorizeUrl.searchParams.set('provider', provider);
+  }
+
+  if (loginHint) {
+    authorizeUrl.searchParams.set('login_hint', loginHint);
+  }
 
   // Create response with redirect
   const response = NextResponse.redirect(authorizeUrl.toString());
 
-  // Store PKCE values and state in httpOnly cookies
+  // Store values in httpOnly cookies
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -77,8 +88,8 @@ export async function GET(request: NextRequest) {
   };
 
   response.cookies.set(STATE_COOKIE, state, cookieOptions);
-  response.cookies.set(VERIFIER_COOKIE, codeVerifier, cookieOptions);
   response.cookies.set(REDIRECT_COOKIE, redirectTo, cookieOptions);
+  response.cookies.set(VERIFIER_COOKIE, codeVerifier, cookieOptions);
 
   return response;
 }

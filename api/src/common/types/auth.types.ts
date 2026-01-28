@@ -12,5 +12,5 @@ export interface AuthUser {
   email: string;
   isAdmin: boolean;
   sessionId: string;
-  deviceId?: string;
+  deviceId: string;
 }

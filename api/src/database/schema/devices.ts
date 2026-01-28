@@ -14,8 +14,6 @@ import { users } from './users';
  */
 export const deviceTypeEnum = pgEnum('device_type', [
   'desktop',
-  'xr',
-  'mobile',
   'web',
 ]);
 
@@ -25,11 +23,6 @@ export const deviceTypeEnum = pgEnum('device_type', [
 export const devicePlatformEnum = pgEnum('device_platform', [
   'windows',
   'macos',
-  'linux',
-  'ios',
-  'android',
-  'quest',
-  'visionpro',
   'web',
 ]);
 

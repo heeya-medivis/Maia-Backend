@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { nanoid } from 'nanoid';
 import * as crypto from 'crypto';
 import { SessionRepository } from '../repositories/session.repository';
+import { DevicesRepository } from '../repositories/devices.repository';
 import {
   signAccessToken,
   verifyAccessToken as jwtVerifyAccessToken,
@@ -17,6 +18,7 @@ import type { AuthProtocol } from '../../../database/schema/auth-connections';
 export interface CreateSessionInput {
   userId: string;
   deviceId?: string;
+  devicePlatform?: string;
   authMethod: AuthProtocol;
   ipAddress?: string;
   userAgent?: string;
@@ -49,6 +51,7 @@ export class SessionService {
 
   constructor(
     private readonly sessionRepository: SessionRepository,
+    private readonly devicesRepository: DevicesRepository,
     private readonly configService: ConfigService,
   ) {
     // Initialize JWT utilities with config service
@@ -61,6 +64,18 @@ export class SessionService {
    * Uses refresh token family for rotation detection
    */
   async createSession(input: CreateSessionInput): Promise<SessionTokens> {
+    // Auto-register or update device if deviceId is provided
+    if (input.deviceId) {
+      const { platform, deviceType } = this.mapPlatformAndDeviceType(input.devicePlatform);
+      await this.devicesRepository.upsert({
+        id: input.deviceId,
+        userId: input.userId,
+        platform,
+        deviceType,
+      });
+      this.logger.log(`Device ${input.deviceId} registered/updated for user ${input.userId} (type: ${deviceType}, platform: ${platform})`);
+    }
+
     // Check for existing active session for this user/device and revoke it
     if (input.deviceId) {
       const existingSession = await this.sessionRepository.findActiveByUserAndDevice(
@@ -257,5 +272,29 @@ export class SessionService {
     });
 
     return true;
+  }
+
+  /**
+   * Map platform string to database enums for both platform and device type
+   */
+  private mapPlatformAndDeviceType(platformInput?: string): {
+    platform?: 'windows' | 'macos' | 'web';
+    deviceType?: 'desktop' | 'web';
+  } {
+    if (!platformInput) return {};
+    
+    const platform = platformInput.toLowerCase();
+    
+    // Map platform string to database values
+    const mapping: Record<string, { 
+      platform: 'windows' | 'macos' | 'web';
+      deviceType: 'desktop' | 'web';
+    }> = {
+      'windows': { platform: 'windows', deviceType: 'desktop' },
+      'macos': { platform: 'macos', deviceType: 'desktop' },
+      'web': { platform: 'web', deviceType: 'web' },
+    };
+    
+    return mapping[platform] ?? { platform: undefined, deviceType: 'desktop' };
   }
 }
