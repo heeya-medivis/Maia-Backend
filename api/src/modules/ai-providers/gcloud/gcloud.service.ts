@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { GoogleAuth } from 'google-auth-library';
 
 export interface GCloudAuthResponse {
   gCloudProjectId: string;
@@ -13,6 +14,9 @@ export interface GCloudAuthResponse {
 
 @Injectable()
 export class GCloudService {
+  private readonly logger = new Logger(GCloudService.name);
+  private authClient: GoogleAuth | null = null;
+
   constructor(private readonly configService: ConfigService) {}
 
   /**
@@ -44,24 +48,43 @@ export class GCloudService {
   }
 
   private async getAccessToken(): Promise<{ accessToken: string; tokenExpiry: Date | null }> {
-    // In production, you'd use Google Cloud SDK or service account credentials
-    // For now, we'll use environment variables similar to the C# implementation
-
     try {
-      const credential = this.createCredentialFromConfig();
-      
-      // Use Google Auth Library to get access token
-      // This requires @google-cloud/local-auth or google-auth-library package
-      const accessToken = await this.fetchAccessToken(credential);
-      
-      // Token typically expires in 1 hour
-      const tokenExpiry = new Date(Date.now() + 3600 * 1000);
+      const auth = this.getAuthClient();
+      const client = await auth.getClient();
+      const { token, res } = await client.getAccessToken();
 
-      return { accessToken, tokenExpiry };
+      if (!token) {
+        throw new Error('Failed to obtain access token from Google');
+      }
+
+      // Extract expiry from response or default to 1 hour
+      let tokenExpiry: Date;
+      if (res?.data?.expiry_date) {
+        tokenExpiry = new Date(res.data.expiry_date);
+      } else {
+        // Default to 1 hour (Google access tokens typically expire in 1 hour)
+        tokenExpiry = new Date(Date.now() + 3600 * 1000);
+      }
+
+      return { accessToken: token, tokenExpiry };
     } catch (error) {
-      console.error('Failed to obtain Google Cloud access token:', error);
+      this.logger.error('Failed to obtain Google Cloud access token:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get or create the Google Auth client (lazy initialization with caching)
+   */
+  private getAuthClient(): GoogleAuth {
+    if (!this.authClient) {
+      const credentials = this.createCredentialFromConfig();
+      this.authClient = new GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      });
+    }
+    return this.authClient;
   }
 
   private createCredentialFromConfig() {
@@ -72,8 +95,14 @@ export class GCloudService {
       ?.replace(/\\n/g, '\n');
     const projectId = this.configService.get<string>('GCLOUD_PROJECT_ID');
 
+    if (!clientEmail || !privateKey || !projectId) {
+      throw new Error(
+        'Missing Google Cloud credentials. Ensure GCLOUD_CLIENT_EMAIL, GCLOUD_PRIVATE_KEY, and GCLOUD_PROJECT_ID are set.',
+      );
+    }
+
     return {
-      type: 'service_account',
+      type: 'service_account' as const,
       project_id: projectId,
       private_key_id: privateKeyId,
       private_key: privateKey,
@@ -83,58 +112,5 @@ export class GCloudService {
       token_uri: 'https://oauth2.googleapis.com/token',
       auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
     };
-  }
-
-  private async fetchAccessToken(credential: any): Promise<string> {
-    // For production, use google-auth-library:
-    // const { GoogleAuth } = require('google-auth-library');
-    // const auth = new GoogleAuth({ credentials: credential, scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
-    // const client = await auth.getClient();
-    // const { token } = await client.getAccessToken();
-    // return token;
-
-    // Simplified implementation - in production, use proper Google Auth
-    // This is a placeholder that should be replaced with actual implementation
-    const jwt = await this.createJWT(credential);
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: jwt,
-      }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(`Failed to get access token: ${JSON.stringify(data)}`);
-    }
-
-    return data.access_token;
-  }
-
-  private async createJWT(credential: any): Promise<string> {
-    // This is a simplified JWT creation - in production use jsonwebtoken or jose
-    const header = {
-      alg: 'RS256',
-      typ: 'JWT',
-      kid: credential.private_key_id,
-    };
-
-    const now = Math.floor(Date.now() / 1000);
-    const payload = {
-      iss: credential.client_email,
-      sub: credential.client_email,
-      aud: 'https://oauth2.googleapis.com/token',
-      iat: now,
-      exp: now + 3600,
-      scope: 'https://www.googleapis.com/auth/cloud-platform',
-    };
-
-    // In production, sign with the private key using a proper JWT library
-    // For now, throw an error to indicate this needs proper implementation
-    throw new Error(
-      'JWT signing not implemented. Please install google-auth-library and implement proper authentication.',
-    );
   }
 }

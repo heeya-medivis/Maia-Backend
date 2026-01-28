@@ -20,7 +20,8 @@ export class OpenAIService {
 
     return {
       apiKey: apiKey!,
-      requestUrl: 'https://api.openai.com/v1/chat/completions',
+      // Use Responses API for o1/o3 reasoning models
+      requestUrl: 'https://api.openai.com/v1/responses',
       webSocketBaseUrl: 'wss://api.openai.com/v1/realtime',
     };
   }
