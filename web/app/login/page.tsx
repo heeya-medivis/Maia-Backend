@@ -236,7 +236,7 @@ function LoginContent() {
 
     const params = new URLSearchParams({
       provider,
-      redirect,
+      redirect: redirect,
     });
 
     if (email) {
@@ -256,7 +256,6 @@ function LoginContent() {
     setLoadingText('Redirecting to your identity provider...');
 
     // Only save SSO preference if we have a connectionId
-    // Without connectionId, the login route would default to Google which is wrong
     if (email && connectionId) {
       saveLoginPreference({
         email,

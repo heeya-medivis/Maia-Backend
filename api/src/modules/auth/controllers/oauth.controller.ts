@@ -6,7 +6,6 @@ import {
   Body,
   Res,
   Req,
-  Headers,
   BadRequestException,
   UnauthorizedException,
   Logger,
@@ -154,8 +153,8 @@ export class OAuthController {
     @Query('provider') provider?: string,
     @Query('connection_id') connectionId?: string,
     @Query('login_hint') loginHint?: string,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-platform') devicePlatform?: string,
+    @Query('device_id') deviceId?: string,
+    @Query('device_platform') devicePlatform?: string,
     @Res() res?: Response,
   ): Promise<void> {
     // Validate required OAuth params
@@ -331,7 +330,7 @@ export class OAuthController {
       redirectUrl.searchParams.set('code', authCode);
       redirectUrl.searchParams.set('state', state.nonce);
 
-      this.logger.log(`Redirecting to client: ${redirectUrl.origin}`);
+      this.logger.log(`Redirecting to client: ${state.redirectUri}`);
       res.redirect(redirectUrl.toString());
     } catch (error) {
       this.logger.error(`WorkOS callback error: ${error.message}`);
@@ -422,6 +421,7 @@ export class OAuthController {
     const tokens = await this.sessionService.createSession({
       userId: authCode.userId!,
       deviceId: authCode.deviceId ?? undefined,
+      devicePlatform: authCode.devicePlatform ?? undefined,
       authMethod: authCode.authMethod!,
       ipAddress: req.headers['x-forwarded-for'] as string ?? req.ip,
       userAgent: req.headers['user-agent'],
@@ -435,11 +435,13 @@ export class OAuthController {
       .limit(1);
 
     return {
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      token_type: 'Bearer',
-      expires_in: Math.floor((tokens.expiresAt.getTime() - Date.now()) / 1000),
-      user_id: user?.id,
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      tokenType: 'Bearer',
+      expiresAt: tokens.expiresAt.toISOString(),
+      refreshExpiresAt: tokens.refreshExpiresAt.toISOString(),
+      userId: user?.id,
     };
   }
 
@@ -458,10 +460,12 @@ export class OAuthController {
     });
 
     return {
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      token_type: 'Bearer',
-      expires_in: Math.floor((tokens.expiresAt.getTime() - Date.now()) / 1000),
+      success: true,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      tokenType: 'Bearer',
+      expiresAt: tokens.expiresAt.toISOString(),
+      refreshExpiresAt: tokens.refreshExpiresAt.toISOString(),
     };
   }
 

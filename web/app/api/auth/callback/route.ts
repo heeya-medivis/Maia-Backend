@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl.toString());
   }
 
+  // We need the code verifier to exchange the code
   if (!codeVerifier) {
     const errorUrl = new URL('/login', APP_URL);
     errorUrl.searchParams.set('error', 'Missing code verifier');
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch user info from /v1/auth/me
     const meResponse = await fetch(`${API_URL}/v1/auth/me`, {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
     });
 
     if (!meResponse.ok) {
@@ -109,12 +110,15 @@ export async function GET(request: NextRequest) {
       ? `${userInfo.firstName} ${userInfo.lastName}` 
       : userInfo?.firstName || userInfo?.email?.split('@')[0] || '';
 
+    // Parse expiresAt ISO string to get expiry time
+    const expiresAt = tokens.expiresAt ? new Date(tokens.expiresAt).getTime() : Date.now() + 600 * 1000;
+
     const session = {
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt: Date.now() + tokens.expires_in * 1000,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt,
       user: {
-        id: tokens.user_id,
+        id: tokens.userId,
         email: userInfo?.email ?? '',
         displayName,
         role: isAdmin ? 'admin' : 'user',
