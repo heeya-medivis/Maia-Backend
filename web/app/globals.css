@@ -26,7 +26,7 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-tt-commons);
   --font-mono: var(--font-geist-mono);
 }
 

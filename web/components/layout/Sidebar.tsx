@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import {
@@ -48,9 +49,13 @@ export function Sidebar({ isAdmin = false, userName = 'User', orgName = 'Organiz
       {/* Logo */}
       <div className="p-4 border-b border-[var(--border)]">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[var(--accent)] rounded-lg flex items-center justify-center">
-            <span className="text-black font-bold text-lg">M</span>
-          </div>
+          <Image
+            src="/MedivisLogomark.png"
+            alt="Medivis"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
           <span className="text-xl font-bold tracking-tight">Maia</span>
         </Link>
       </div>

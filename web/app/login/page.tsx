@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, FormEvent, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
@@ -97,9 +98,13 @@ function LoginSkeleton() {
       <div className="relative z-10 w-full max-w-[420px] px-5">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
-            <div className="w-11 h-11 bg-[var(--accent)] rounded-[10px] flex items-center justify-center">
-              <span className="text-black font-bold text-[22px]">M</span>
-            </div>
+            <Image
+              src="/MedivisLogomark.png"
+              alt="Medivis"
+              width={44}
+              height={44}
+              className="rounded-[10px]"
+            />
             <span className="text-[28px] font-bold tracking-tight">Maia</span>
           </div>
         </div>
@@ -395,9 +400,13 @@ function LoginContent() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="w-11 h-11 bg-[var(--accent)] rounded-[10px] flex items-center justify-center">
-              <span className="text-black font-bold text-[22px]">M</span>
-            </div>
+            <Image
+              src="/MedivisLogomark.png"
+              alt="Medivis"
+              width={44}
+              height={44}
+              className="rounded-[10px]"
+            />
             <span className="text-[28px] font-bold tracking-tight">Maia</span>
           </Link>
         </div>
