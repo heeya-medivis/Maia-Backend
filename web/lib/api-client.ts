@@ -53,6 +53,63 @@ export interface MeResponse {
   currentDeviceId: string | null;
 }
 
+// =============================================================================
+// MAIA Types
+// =============================================================================
+
+export type ModelCategory = 'balanced' | 'thinking' | 'live';
+export type Provider = 'invalid' | 'gcloud' | 'openai' | 'self';
+export type HostProvider = 'invalid' | 'aws_ec2';
+export type PromptType = 'invalid' | 'system_prompt' | 'analysis_prompt';
+
+export interface MaiaModel {
+  id: string;
+  modelName: string;
+  modelDisplayName: string;
+  modelCategory: ModelCategory;
+  provider: Provider;
+  modelPriority: number | null;
+  pricing: number;
+  isActive: boolean;
+  createdDateTime: string;
+  modifiedDateTime: string | null;
+}
+
+export interface MaiaPrompt {
+  id: string;
+  type: PromptType;
+  content: string;
+  maiaModelId: string;
+  isActive: boolean;
+  createdDateTime: string;
+}
+
+export interface MaiaHost {
+  id: string;
+  hostProvider: HostProvider;
+  serverIp: string;
+  maiaModelId: string;
+}
+
+export interface MaiaModelWithRelations extends MaiaModel {
+  prompts: MaiaPrompt[];
+  host: MaiaHost | null;
+}
+
+export interface CreateMaiaModelInput {
+  modelName: string;
+  modelDisplayName: string;
+  modelCategory: number; // 0=balanced, 1=thinking, 2=live
+  provider: number; // 0=invalid, 1=gcloud, 2=openai, 3=self
+  modelPriority?: number;
+  pricing?: number;
+  isActive?: boolean;
+  hostProvider?: number;
+  serverIp?: string;
+}
+
+export interface UpdateMaiaModelInput extends Partial<CreateMaiaModelInput> {}
+
 // Legacy type for backwards compatibility
 export interface CurrentUser {
   user: {
@@ -158,6 +215,42 @@ class ApiClient {
   async getMe(): Promise<MeResponse> {
     const response = await this.request<MeResponse>('/me');
     return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Admin Endpoints
+  // ===========================================================================
+
+  async getMaiaModels(): Promise<MaiaModel[]> {
+    const response = await this.request<MaiaModel[]>('/admin/maia/models');
+    return response.data ?? [];
+  }
+
+  async getMaiaModel(id: string): Promise<MaiaModelWithRelations> {
+    const response = await this.request<MaiaModelWithRelations>(`/admin/maia/models/${id}`);
+    return response.data!;
+  }
+
+  async createMaiaModel(data: CreateMaiaModelInput): Promise<MaiaModel> {
+    const response = await this.request<MaiaModel>('/admin/maia/models', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updateMaiaModel(id: string, data: UpdateMaiaModelInput): Promise<MaiaModel> {
+    const response = await this.request<MaiaModel>(`/admin/maia/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deleteMaiaModel(id: string): Promise<void> {
+    await this.request(`/admin/maia/models/${id}`, {
+      method: 'DELETE',
+    });
   }
 }
 
