@@ -22,6 +22,9 @@ export class UsersController {
         firstName: user.firstName,
         lastName: user.lastName,
         emailConfirmed: user.emailConfirmed,
+        organization: user.organization,
+        role: user.role,
+        isAdmin: user.isAdmin,
         createdAt: user.createdDateTime,
       },
     };
@@ -40,6 +43,9 @@ export class UsersController {
         firstName: user.firstName,
         lastName: user.lastName,
         emailConfirmed: user.emailConfirmed,
+        organization: user.organization,
+        role: user.role,
+        isAdmin: user.isAdmin,
         createdAt: user.createdDateTime,
       },
     };

@@ -170,7 +170,7 @@ export class WorkOSWebhookService {
       firstName: user.first_name,
       lastName: user.last_name,
       emailVerified: user.email_verified,
-      imageUrl: user.profile_picture_url,
+
     });
 
     this.logger.log(`User created: ${user.id} (${user.email})`);
@@ -183,7 +183,7 @@ export class WorkOSWebhookService {
       firstName: user.first_name,
       lastName: user.last_name,
       emailVerified: user.email_verified,
-      imageUrl: user.profile_picture_url,
+
     });
 
     this.logger.log(`User updated: ${user.id} (${user.email})`);

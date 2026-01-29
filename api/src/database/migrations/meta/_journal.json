@@ -8,6 +8,20 @@
       "when": 1769466391095,
       "tag": "0000_first_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769707805586,
+      "tag": "0002_flippant_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769709512709,
+      "tag": "0002_skinny_viper",
+      "breakpoints": true
     }
   ]
 }

@@ -42,9 +42,10 @@ export class UsersRepository {
         set: {
           email: data.email,
           firstName: data.firstName,
-          middleName: data.middleName,
           lastName: data.lastName,
           emailConfirmed: data.emailConfirmed,
+          organization: data.organization,
+          role: data.role,
           updatedAt: new Date(),
         },
       })

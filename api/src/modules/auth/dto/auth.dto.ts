@@ -58,7 +58,6 @@ export class TokenResponseDto {
     email: string;
     firstName: string | null;
     lastName: string | null;
-    imageUrl: string | null;
   };
 }
 
@@ -68,7 +67,8 @@ export class MeResponseDto {
     email: string;
     firstName: string | null;
     lastName: string | null;
-    imageUrl: string | null;
+    organization: string | null;
+    role: string | null;
     emailVerified: boolean;
     isAdmin: boolean;
   };

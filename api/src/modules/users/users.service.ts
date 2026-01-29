@@ -33,7 +33,6 @@ export class UsersService {
     firstName?: string | null;
     lastName?: string | null;
     emailVerified?: boolean;
-    imageUrl?: string | null;
   }): Promise<User> {
     // Find existing user by email
     const existingUser = await this.usersRepository.findByEmail(data.email);
@@ -44,7 +43,6 @@ export class UsersService {
         firstName: data.firstName ?? existingUser.firstName,
         lastName: data.lastName ?? existingUser.lastName,
         emailConfirmed: data.emailVerified ?? existingUser.emailConfirmed,
-        imageUrl: data.imageUrl ?? existingUser.imageUrl,
         deletedAt: null, // Reactivate if soft-deleted
       });
       return updated!;
@@ -58,7 +56,6 @@ export class UsersService {
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
       emailConfirmed: data.emailVerified ?? false,
-      imageUrl: data.imageUrl,
     });
   }
 
