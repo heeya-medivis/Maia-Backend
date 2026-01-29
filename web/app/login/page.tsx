@@ -137,6 +137,17 @@ function LoginContent() {
     errorFromParams === 'sso_required' ? null : errorFromParams
   );
 
+  // Unity desktop app callback mode
+  // When Unity opens this page, it passes PKCE params so we can complete OAuth and redirect back
+  const isUnityCallback = searchParams.get('unity_callback') === 'true';
+  const unityState = searchParams.get('state');
+  const unityCodeChallenge = searchParams.get('code_challenge');
+  const unityCodeChallengeMethod = searchParams.get('code_challenge_method') ?? 'S256';
+  const unityRedirectUri = searchParams.get('redirect_uri');
+  const unityClientId = searchParams.get('client_id');
+  const unityDeviceId = searchParams.get('device_id');
+  const unityDevicePlatform = searchParams.get('device_platform');
+
   // Handle SSO required error - show interstitial instead of error banner
   const [ssoRequiredOrg, setSsoRequiredOrg] = useState<string | null>(
     errorFromParams === 'sso_required' ? (errorDescription ?? 'Your organization') : null
@@ -152,8 +163,9 @@ function LoginContent() {
 
   // Load saved login preference on mount
   useEffect(() => {
-    // Don't show welcome back if there's an error or invite
-    if (errorFromParams || inviteTokenParam) return;
+    // Don't show welcome back if there's an error, invite, or Unity callback
+    // Unity users should always see the full login options
+    if (errorFromParams || inviteTokenParam || isUnityCallback) return;
 
     const pref = loadLoginPreference();
     if (pref) {
@@ -234,11 +246,37 @@ function LoginContent() {
     setPhase('loading');
     setLoadingText(`Redirecting to ${providerLabel}...`);
 
-    // Save preference for next time
-    if (email) {
+    // Save preference for next time (only for web flow)
+    if (email && !isUnityCallback) {
       saveLoginPreference({ email, method: provider, methodLabel: providerLabel });
     }
 
+    // Unity callback mode - redirect to Unity-specific login route with PKCE params
+    if (isUnityCallback && unityState && unityCodeChallenge && unityRedirectUri && unityClientId) {
+      const params = new URLSearchParams({
+        provider,
+        state: unityState,
+        code_challenge: unityCodeChallenge,
+        code_challenge_method: unityCodeChallengeMethod,
+        redirect_uri: unityRedirectUri,
+        client_id: unityClientId,
+      });
+
+      if (email) {
+        params.set('login_hint', email);
+      }
+      if (unityDeviceId) {
+        params.set('device_id', unityDeviceId);
+      }
+      if (unityDevicePlatform) {
+        params.set('device_platform', unityDevicePlatform);
+      }
+
+      window.location.href = `/api/auth/unity-login?${params.toString()}`;
+      return;
+    }
+
+    // Standard web login flow
     const params = new URLSearchParams({
       provider,
       redirect: redirect,
@@ -260,8 +298,8 @@ function LoginContent() {
     setPhase('loading');
     setLoadingText('Redirecting to your identity provider...');
 
-    // Only save SSO preference if we have a connectionId
-    if (email && connectionId) {
+    // Only save SSO preference if we have a connectionId (and not Unity callback)
+    if (email && connectionId && !isUnityCallback) {
       saveLoginPreference({
         email,
         method: 'sso',
@@ -270,6 +308,34 @@ function LoginContent() {
       });
     }
 
+    // Unity callback mode - redirect to Unity-specific login route with PKCE params
+    if (isUnityCallback && unityState && unityCodeChallenge && unityRedirectUri && unityClientId) {
+      const params = new URLSearchParams({
+        state: unityState,
+        code_challenge: unityCodeChallenge,
+        code_challenge_method: unityCodeChallengeMethod,
+        redirect_uri: unityRedirectUri,
+        client_id: unityClientId,
+      });
+
+      if (connectionId) {
+        params.set('connection_id', connectionId);
+      }
+      if (email) {
+        params.set('login_hint', email);
+      }
+      if (unityDeviceId) {
+        params.set('device_id', unityDeviceId);
+      }
+      if (unityDevicePlatform) {
+        params.set('device_platform', unityDevicePlatform);
+      }
+
+      window.location.href = `/api/auth/unity-login?${params.toString()}`;
+      return;
+    }
+
+    // Standard web login flow
     const params = new URLSearchParams({ redirect });
 
     if (connectionId) {
@@ -311,6 +377,12 @@ function LoginContent() {
   };
 
   const handleMagicLink = async () => {
+    // Magic link doesn't work with Unity callback mode - the email opens in browser, not Unity
+    if (isUnityCallback) {
+      setError('Magic link is not available for desktop app login. Please use Google, Microsoft, or Apple sign-in.');
+      return;
+    }
+
     if (!email.trim()) {
       setError('Please enter your email address first');
       return;
@@ -410,6 +482,18 @@ function LoginContent() {
             <span className="text-[28px] font-bold tracking-tight">Maia</span>
           </Link>
         </div>
+
+        {/* Unity Desktop App Banner */}
+        {isUnityCallback && (
+          <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl p-4 mb-6 text-center">
+            <p className="text-sm text-[var(--accent)] font-medium">
+              Signing in to Maia Desktop
+            </p>
+            <p className="text-xs text-[var(--muted)] mt-1">
+              You&apos;ll be redirected back to the app after signing in
+            </p>
+          </div>
+        )}
 
         {/* Login Card */}
         <div className="card-glow bg-[var(--card)] rounded-2xl p-8 border border-[var(--border)]">

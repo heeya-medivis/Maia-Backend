@@ -35,8 +35,6 @@ const AUTH_CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 @Controller('v1/oauth')
 export class OAuthController {
   private readonly logger = new Logger(OAuthController.name);
-  private readonly apiUrl: string;
-  private readonly webUrl: string;
   private readonly jwtAudience: string;
   private readonly allowedClientIds: string[];
   private readonly webRedirectUris: string[];
@@ -49,8 +47,6 @@ export class OAuthController {
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
-    this.apiUrl = this.configService.get<string>('API_URL', 'http://localhost:3000');
-    this.webUrl = this.configService.get<string>('WEB_URL', 'http://localhost:3001');
     this.jwtAudience = this.configService.get<string>('JWT_AUDIENCE', 'maia-api');
     this.allowedClientIds = this.configService.get<string[]>('ALLOWED_CLIENT_IDS', ['maia-web', 'maia_desktop']);
     this.webRedirectUris = this.configService.get<string[]>('WEB_REDIRECT_URIS', []);
@@ -69,18 +65,6 @@ export class OAuthController {
   }
 
   /**
-   * Validate custom scheme redirect URIs for Unity/XR clients
-   */
-  private isValidCustomSchemeRedirect(uri: string): boolean {
-    const patterns = [
-      /^maia:\/\/callback$/,
-      /^maia:\/\/auth\/callback$/,
-      /^maia:\/\/oauth\/callback$/,
-    ];
-    return patterns.some((pattern) => pattern.test(uri));
-  }
-
-  /**
    * Validate web redirect URIs from environment config
    */
   private isValidWebRedirect(uri: string): boolean {
@@ -91,9 +75,7 @@ export class OAuthController {
    * Validate any allowed redirect URI
    */
   private isValidRedirectUri(uri: string): boolean {
-    return this.isValidLoopbackRedirect(uri) || 
-           this.isValidCustomSchemeRedirect(uri) || 
-           this.isValidWebRedirect(uri);
+    return this.isValidLoopbackRedirect(uri) || this.isValidWebRedirect(uri);
   }
 
   /**

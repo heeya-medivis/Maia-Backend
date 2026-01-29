@@ -242,16 +242,21 @@ export class WorkOSWebhookService {
 
   private async handleMembershipCreated(membership: WorkOSOrganizationMembership): Promise<void> {
     this.logger.log(`Organization membership created: ${membership.id} (user: ${membership.user_id}, org: ${membership.organization_id})`);
-    // TODO: Handle organization membership if needed
+    // TODO(auth): Implement organization membership sync when multi-org support is added
+    // - Link user to organization in local DB
+    // - Assign default role based on WorkOS membership role
   }
 
   private async handleMembershipUpdated(membership: WorkOSOrganizationMembership): Promise<void> {
     this.logger.log(`Organization membership updated: ${membership.id} (role: ${membership.role.slug})`);
-    // TODO: Handle organization membership role updates if needed
+    // TODO(auth): Implement membership role sync when multi-org support is added
+    // - Update user's role in organization based on WorkOS membership role
   }
 
   private async handleMembershipDeleted(membership: WorkOSOrganizationMembership): Promise<void> {
     this.logger.log(`Organization membership deleted: ${membership.id}`);
-    // TODO: Handle organization membership removal if needed
+    // TODO(auth): Implement membership removal when multi-org support is added
+    // - Remove user from organization in local DB
+    // - Consider: soft delete or hard delete the membership record?
   }
 }

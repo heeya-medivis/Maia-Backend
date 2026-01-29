@@ -15,26 +15,27 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS - uses CORS_ORIGINS env var plus common patterns
+  const corsOrigins = process.env.CORS_ORIGINS?.split(',').map(o => o.trim()) ?? [];
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        process.env.API_URL,
-        process.env.WEB_URL,
-        'https://surgicalar.com',
-      ];
-
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
-      // Check if origin matches
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.includes('localhost') ||
-        origin.endsWith('.surgicalar.com')
-      ) {
+      // Check against configured origins
+      if (corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow localhost in development
+      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        return callback(null, true);
+      }
+
+      // Allow surgicalar.com subdomains
+      if (origin.endsWith('.surgicalar.com') || origin === 'https://surgicalar.com') {
         return callback(null, true);
       }
 
@@ -59,6 +60,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3000;
+  const apiUrl = process.env.API_URL || `http://localhost:${port}`;
   await app.listen(port);
 
   console.log(`
@@ -67,7 +69,7 @@ async function bootstrap() {
 ╠═══════════════════════════════════════════╣
 ║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(26)}║
 ║  Port: ${port.toString().padEnd(33)}║
-║  Swagger: http://localhost:${port}/api/docs${' '.repeat(4)}║
+║  Swagger: ${apiUrl}/api/docs${' '.repeat(Math.max(0, 16 - apiUrl.length + 22))}║
 ╚═══════════════════════════════════════════╝
   `);
 }

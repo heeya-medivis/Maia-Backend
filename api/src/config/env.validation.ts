@@ -53,6 +53,13 @@ export const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   GOOGLE_AI_API_KEY: z.string().optional(),
 
+  // Google Cloud (for Vertex AI)
+  GCLOUD_PROJECT_ID: z.string().optional(),
+  GCLOUD_SERVER_LOCATION: z.string().optional(),
+  GCLOUD_CLIENT_EMAIL: z.string().optional(),
+  GCLOUD_PRIVATE_KEY_ID: z.string().optional(),
+  GCLOUD_PRIVATE_KEY: z.string().optional(),
+
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
@@ -60,7 +67,6 @@ export const envSchema = z.object({
   // URLs
   API_URL: z.string().url().default('http://localhost:3000'),
   WEB_URL: z.string().url().default('http://localhost:3001'),
-  DEEP_LINK_SCHEME: z.string().default('maia'),
 
   // Web Dashboard OAuth Redirect URIs (comma-separated)
   WEB_REDIRECT_URIS: z
