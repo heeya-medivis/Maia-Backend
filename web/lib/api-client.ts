@@ -173,11 +173,11 @@ export interface AdminUser {
   email: string;
   firstName: string | null;
   lastName: string | null;
-  emailConfirmed: boolean;
   organization: string | null;
   role: string | null;
   isAdmin: boolean;
-  lastLoginDateTime: string | null;
+  lastLoginWeb: string | null;
+  lastLoginApp: string | null;
   createdDateTime: string;
 }
 

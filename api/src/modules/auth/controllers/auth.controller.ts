@@ -85,7 +85,6 @@ export class AuthController {
         lastName: user.lastName,
         organization: user.organization,
         role: user.role,
-        emailVerified: user.emailConfirmed ?? false,
         isAdmin: user.isAdmin ?? false,
       },
       devices: userDevices.map((d) => ({

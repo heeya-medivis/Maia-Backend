@@ -169,8 +169,6 @@ export class WorkOSWebhookService {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      emailVerified: user.email_verified,
-
     });
 
     this.logger.log(`User created: ${user.id} (${user.email})`);
@@ -182,8 +180,6 @@ export class WorkOSWebhookService {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      emailVerified: user.email_verified,
-
     });
 
     this.logger.log(`User updated: ${user.id} (${user.email})`);
@@ -208,7 +204,6 @@ export class WorkOSWebhookService {
       email: primaryEmail,
       firstName: (data.first_name as string) ?? null,
       lastName: (data.last_name as string) ?? null,
-      emailVerified: true, // DSync users are always verified via their IdP
     });
 
     this.logger.log(`DSync user created: ${data.idp_id} (${primaryEmail})`);
@@ -228,7 +223,6 @@ export class WorkOSWebhookService {
       email: primaryEmail,
       firstName: (data.first_name as string) ?? null,
       lastName: (data.last_name as string) ?? null,
-      emailVerified: true,
     });
 
     this.logger.log(`DSync user updated: ${data.idp_id} (${primaryEmail})`);

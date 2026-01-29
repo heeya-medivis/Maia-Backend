@@ -43,7 +43,6 @@ export class UsersRepository {
           email: data.email,
           firstName: data.firstName,
           lastName: data.lastName,
-          emailConfirmed: data.emailConfirmed,
           organization: data.organization,
           role: data.role,
           updatedAt: new Date(),

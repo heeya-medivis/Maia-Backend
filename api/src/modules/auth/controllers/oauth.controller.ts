@@ -280,6 +280,16 @@ export class OAuthController {
         }
       }
 
+      // Update last login timestamp based on platform
+      const isWebLogin = state.devicePlatform === 'web' || !state.devicePlatform;
+      await this.db
+        .update(users)
+        .set({
+          ...(isWebLogin ? { lastLoginWeb: new Date() } : { lastLoginApp: new Date() }),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
       // Upsert identity
       const identityProvider = this.mapConnectionTypeToProvider(profile.connectionType, state.provider);
       await this.upsertIdentity({
@@ -479,7 +489,6 @@ export class OAuthController {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
-        emailConfirmed: true,
       })
       .returning();
     return user;

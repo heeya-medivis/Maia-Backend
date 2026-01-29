@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, Button, Badge, Input, Modal } from '@/components/ui';
-import { Users, Search, Shield, Mail, Calendar, Loader2, RefreshCw, Building2, Briefcase, CheckCircle, XCircle, Clock, Pencil } from 'lucide-react';
+import { Users, Search, Shield, Mail, Calendar, Loader2, RefreshCw, Building2, Briefcase, Globe, Smartphone, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api, AdminUser, UpdateUserData, ApiClientError } from '@/lib/api-client';
 
@@ -114,10 +114,10 @@ export function UsersContent() {
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">User</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Email</th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Email Confirmed</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Organization</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Role</th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Last Login</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Last Login (Web)</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Last Login (App)</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Joined</th>
                 <th className="text-right px-4 py-3 text-sm font-medium text-[var(--muted)]">Actions</th>
               </tr>
@@ -125,13 +125,13 @@ export function UsersContent() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center">
+                  <td colSpan={9} className="px-4 py-8 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)] mx-auto" />
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-[var(--muted)]">
+                  <td colSpan={9} className="px-4 py-8 text-center text-[var(--muted)]">
                     {searchQuery ? 'No users match your search.' : 'No users found.'}
                   </td>
                 </tr>
@@ -155,13 +155,6 @@ export function UsersContent() {
                         <Mail className="w-4 h-4" />
                         {user.email}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.emailConfirmed ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-[var(--muted)]" />
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       {user.organization ? (
@@ -192,10 +185,20 @@ export function UsersContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {user.lastLoginDateTime ? (
+                      {user.lastLoginWeb ? (
                         <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                          <Clock className="w-4 h-4" />
-                          {new Date(user.lastLoginDateTime).toLocaleDateString()}
+                          <Globe className="w-4 h-4" />
+                          {new Date(user.lastLoginWeb).toLocaleDateString()}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[var(--muted)]">Never</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {user.lastLoginApp ? (
+                        <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                          <Smartphone className="w-4 h-4" />
+                          {new Date(user.lastLoginApp).toLocaleDateString()}
                         </div>
                       ) : (
                         <span className="text-sm text-[var(--muted)]">Never</span>

@@ -69,7 +69,6 @@ export class MeResponseDto {
     lastName: string | null;
     organization: string | null;
     role: string | null;
-    emailVerified: boolean;
     isAdmin: boolean;
   };
   devices: Array<{

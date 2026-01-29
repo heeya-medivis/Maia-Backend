@@ -22,11 +22,11 @@ export class UsersAdminController {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      emailConfirmed: user.emailConfirmed,
       organization: user.organization,
       role: user.role,
       isAdmin: user.isAdmin,
-      lastLoginDateTime: user.lastLoginDateTime,
+      lastLoginWeb: user.lastLoginWeb,
+      lastLoginApp: user.lastLoginApp,
       createdDateTime: user.createdDateTime,
     }));
   }
@@ -50,11 +50,11 @@ export class UsersAdminController {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      emailConfirmed: user.emailConfirmed,
       organization: user.organization,
       role: user.role,
       isAdmin: user.isAdmin,
-      lastLoginDateTime: user.lastLoginDateTime,
+      lastLoginWeb: user.lastLoginWeb,
+      lastLoginApp: user.lastLoginApp,
       createdDateTime: user.createdDateTime,
     };
   }

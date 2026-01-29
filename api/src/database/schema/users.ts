@@ -19,7 +19,6 @@ export const users = pgTable(
 
     // Email (from IdentityUser.Email + UserName)
     email: text('email').notNull().unique(),
-    emailConfirmed: boolean('email_confirmed').default(false).notNull(),
 
     // Custom fields from ApplicationUser
     firstName: text('first_name').notNull(),
@@ -33,8 +32,9 @@ export const users = pgTable(
     // Only Maia company employees should have this
     isAdmin: boolean('is_admin').default(false).notNull(),
 
-    // Tracking fields from ApplicationUser
-    lastLoginDateTime: timestamp('last_login_date_time', { withTimezone: true }),
+    // Tracking fields - separate login timestamps for web and app
+    lastLoginWeb: timestamp('last_login_web', { withTimezone: true }),
+    lastLoginApp: timestamp('last_login_app', { withTimezone: true }),
 
     // Timestamps
     createdDateTime: timestamp('created_date_time', { withTimezone: true })
