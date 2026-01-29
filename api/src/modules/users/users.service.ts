@@ -32,8 +32,6 @@ export class UsersService {
     email: string;
     firstName?: string | null;
     lastName?: string | null;
-    emailVerified?: boolean;
-    imageUrl?: string | null;
   }): Promise<User> {
     // Find existing user by email
     const existingUser = await this.usersRepository.findByEmail(data.email);
@@ -43,8 +41,6 @@ export class UsersService {
       const updated = await this.usersRepository.update(existingUser.id, {
         firstName: data.firstName ?? existingUser.firstName,
         lastName: data.lastName ?? existingUser.lastName,
-        emailConfirmed: data.emailVerified ?? existingUser.emailConfirmed,
-        imageUrl: data.imageUrl ?? existingUser.imageUrl,
         deletedAt: null, // Reactivate if soft-deleted
       });
       return updated!;
@@ -57,8 +53,6 @@ export class UsersService {
       email: data.email,
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
-      emailConfirmed: data.emailVerified ?? false,
-      imageUrl: data.imageUrl,
     });
   }
 

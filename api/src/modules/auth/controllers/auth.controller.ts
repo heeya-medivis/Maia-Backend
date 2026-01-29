@@ -83,8 +83,8 @@ export class AuthController {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        imageUrl: user.imageUrl,
-        emailVerified: user.emailConfirmed ?? false,
+        organization: user.organization,
+        role: user.role,
         isAdmin: user.isAdmin ?? false,
       },
       devices: userDevices.map((d) => ({

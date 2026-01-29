@@ -6,7 +6,7 @@ import { User } from '../../../database/schema';
  * 
  * The JwtAuthGuard stores:
  * - request.user = AuthUser (minimal auth info: id, email, isAdmin, sessionId, deviceId)
- * - request.dbUser = Full User record from database (includes firstName, lastName, imageUrl, etc.)
+ * - request.dbUser = Full User record from database (includes firstName, lastName, organization, role, etc.)
  * 
  * This decorator returns the full User record (dbUser) for use in controllers.
  * 

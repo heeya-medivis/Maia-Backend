@@ -1,29 +1,76 @@
 'use client';
 
-import { Card, Button, Badge, Input } from '@/components/ui';
-import { Users, Search, Shield, Mail, Calendar, Loader2 } from 'lucide-react';
-import { useState } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  isAdmin: boolean;
-  createdAt: string;
-}
+import { Card, Button, Badge, Input, Modal } from '@/components/ui';
+import { Users, Search, Shield, Mail, Calendar, Loader2, RefreshCw, Building2, Briefcase, Globe, Smartphone, Pencil } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { api, AdminUser, UpdateUserData, ApiClientError } from '@/lib/api-client';
 
 export function UsersContent() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // TODO: Fetch users from API
-  const users: User[] = [];
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editForm, setEditForm] = useState<UpdateUserData>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  const filteredUsers = users.filter(user => 
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.getUsers();
+      setUsers(data);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch users');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleEditClick = (user: AdminUser) => {
+    setEditingUser(user);
+    setEditForm({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      organization: user.organization,
+      role: user.role,
+      isAdmin: user.isAdmin,
+    });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updatedUser = await api.updateUser(editingUser.id, editForm);
+      setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+      setEditingUser(null);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to update user');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.firstName?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()))
+    (user.lastName?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (user.organization?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -33,7 +80,20 @@ export function UsersContent() {
           <h1 className="text-2xl font-bold">Users</h1>
           <p className="text-[var(--muted)]">Manage platform users and permissions.</p>
         </div>
+        <Button variant="ghost" onClick={fetchUsers} disabled={isLoading}>
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
+
+      {/* Error State */}
+      {error && (
+        <Card className="p-4 border-[var(--danger)] bg-[var(--danger)]/10">
+          <p className="text-[var(--danger)]">{error}</p>
+          <Button variant="ghost" size="sm" onClick={fetchUsers} className="mt-2">
+            Try Again
+          </Button>
+        </Card>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -54,7 +114,10 @@ export function UsersContent() {
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">User</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Email</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Organization</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Role</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Last Login (Web)</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Last Login (App)</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Joined</th>
                 <th className="text-right px-4 py-3 text-sm font-medium text-[var(--muted)]">Actions</th>
               </tr>
@@ -62,13 +125,13 @@ export function UsersContent() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center">
+                  <td colSpan={9} className="px-4 py-8 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)] mx-auto" />
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
+                  <td colSpan={9} className="px-4 py-8 text-center text-[var(--muted)]">
                     {searchQuery ? 'No users match your search.' : 'No users found.'}
                   </td>
                 </tr>
@@ -94,24 +157,63 @@ export function UsersContent() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {user.isAdmin ? (
-                        <Badge variant="accent">
-                          <Shield className="w-3 h-3 mr-1" />
-                          Admin
-                        </Badge>
+                      {user.organization ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Building2 className="w-4 h-4 text-[var(--muted)]" />
+                          {user.organization}
+                        </div>
                       ) : (
-                        <Badge variant="default">User</Badge>
+                        <span className="text-sm text-[var(--muted)]">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {user.isAdmin && (
+                          <Badge variant="accent">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Admin
+                          </Badge>
+                        )}
+                        {user.role ? (
+                          <Badge variant="default">
+                            <Briefcase className="w-3 h-3 mr-1" />
+                            {user.role}
+                          </Badge>
+                        ) : !user.isAdmin ? (
+                          <span className="text-sm text-[var(--muted)]">—</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {user.lastLoginWeb ? (
+                        <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                          <Globe className="w-4 h-4" />
+                          {new Date(user.lastLoginWeb).toLocaleDateString()}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[var(--muted)]">Never</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {user.lastLoginApp ? (
+                        <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+                          <Smartphone className="w-4 h-4" />
+                          {new Date(user.lastLoginApp).toLocaleDateString()}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[var(--muted)]">Never</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
                         <Calendar className="w-4 h-4" />
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.createdDateTime).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="sm">
-                        View
+                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(user)}>
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit
                       </Button>
                     </td>
                   </tr>
@@ -122,13 +224,89 @@ export function UsersContent() {
         </div>
       </Card>
 
-      {/* Info Card */}
-      <Card className="p-5 bg-[var(--card-hover)]">
-        <p className="text-sm text-[var(--muted)]">
-          <strong className="text-white">Note:</strong> User management API endpoints will be added in a future update. 
-          For now, use the database directly to manage users and admin permissions.
-        </p>
-      </Card>
+      {/* Stats */}
+      {users.length > 0 && (
+        <div className="flex gap-4 text-sm text-[var(--muted)]">
+          <span>{users.length} total users</span>
+          <span>{users.filter(u => u.isAdmin).length} admins</span>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title="Edit User"
+        size="md"
+      >
+        {editingUser && (
+          <div className="space-y-4">
+            <div className="text-sm text-[var(--muted)] mb-4">
+              Editing: {editingUser.email}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">First Name</label>
+                <Input
+                  value={editForm.firstName ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                  placeholder="First name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Last Name</label>
+                <Input
+                  value={editForm.lastName ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Organization</label>
+              <Input
+                value={editForm.organization ?? ''}
+                onChange={(e) => setEditForm({ ...editForm, organization: e.target.value || null })}
+                placeholder="Organization (optional)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <Input
+                value={editForm.role ?? ''}
+                onChange={(e) => setEditForm({ ...editForm, role: e.target.value || null })}
+                placeholder="Role (optional)"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isAdmin"
+                checked={editForm.isAdmin ?? false}
+                onChange={(e) => setEditForm({ ...editForm, isAdmin: e.target.checked })}
+                className="w-4 h-4 rounded border-[var(--border)] bg-[var(--input)] text-[var(--accent)]"
+              />
+              <label htmlFor="isAdmin" className="text-sm font-medium flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Admin Access
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border)]">
+              <Button variant="ghost" onClick={() => setEditingUser(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveUser} disabled={isSaving}>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

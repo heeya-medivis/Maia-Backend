@@ -165,6 +165,31 @@ export interface CurrentUser {
 }
 
 // =============================================================================
+// Admin User Types
+// =============================================================================
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  organization: string | null;
+  role: string | null;
+  isAdmin: boolean;
+  lastLoginWeb: string | null;
+  lastLoginApp: string | null;
+  createdDateTime: string;
+}
+
+export interface UpdateUserData {
+  firstName?: string;
+  lastName?: string;
+  organization?: string | null;
+  role?: string | null;
+  isAdmin?: boolean;
+}
+
+// =============================================================================
 // BFF Response Format
 // =============================================================================
 
@@ -247,6 +272,23 @@ class ApiClient {
 
   async getMe(): Promise<MeResponse> {
     const response = await this.request<MeResponse>('/me');
+    return response.data!;
+  }
+
+  // ===========================================================================
+  // Users Admin Endpoints
+  // ===========================================================================
+
+  async getUsers(): Promise<AdminUser[]> {
+    const response = await this.request<AdminUser[]>('/admin/users');
+    return response.data ?? [];
+  }
+
+  async updateUser(id: string, data: UpdateUserData): Promise<AdminUser> {
+    const response = await this.request<AdminUser>(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
     return response.data!;
   }
 
