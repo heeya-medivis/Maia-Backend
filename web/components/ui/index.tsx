@@ -15,35 +15,50 @@ import {
 function useDialogA11y(isOpen: boolean, onClose: () => void) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const hasInitialFocusRef = useRef(false);
+
+  // Keep onClose ref up to date without triggering effect
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      hasInitialFocusRef.current = false;
+      return;
+    }
 
-    // Store the previously focused element
-    previousFocusRef.current = document.activeElement as HTMLElement;
+    // Only focus on initial open, not on every re-render
+    if (!hasInitialFocusRef.current) {
+      // Store the previously focused element
+      previousFocusRef.current = document.activeElement as HTMLElement;
 
-    // Focus the dialog or first focusable element
-    const dialog = dialogRef.current;
-    if (dialog) {
-      const focusable = dialog.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable.length > 0) {
-        focusable[0].focus();
-      } else {
-        dialog.focus();
+      // Focus the dialog or first focusable element
+      const dialog = dialogRef.current;
+      if (dialog) {
+        const focusable = dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        } else {
+          dialog.focus();
+        }
       }
+      hasInitialFocusRef.current = true;
     }
 
     // ESC key handler
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
       // Focus trap
+      const dialog = dialogRef.current;
       if (e.key === 'Tab' && dialog) {
         const focusable = dialog.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -70,7 +85,7 @@ function useDialogA11y(isOpen: boolean, onClose: () => void) {
       // Restore focus to previous element
       previousFocusRef.current?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   return dialogRef;
 }
