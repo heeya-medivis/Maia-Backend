@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MaiaModelsRepository } from '../repositories/maia-models.repository';
 import { MaiaHostsRepository } from '../repositories/maia-hosts.repository';
 import { MaiaPromptsRepository } from '../repositories/maia-prompts.repository';
+import { UserMaiaAccessRepository } from '../repositories/user-maia-access.repository';
 import { MaiaModelResponseDto, Provider, HostProvider } from '../dto';
 import { NotFoundException, BadRequestException } from '../../../common/exceptions';
 import { MaiaModel, NewMaiaModel, HostProvider as DbHostProvider } from '../../../database/schema';
@@ -12,6 +13,7 @@ export class MaiaModelsService {
     private readonly modelsRepository: MaiaModelsRepository,
     private readonly hostsRepository: MaiaHostsRepository,
     private readonly promptsRepository: MaiaPromptsRepository,
+    private readonly userAccessRepository: UserMaiaAccessRepository,
   ) {}
 
   async findAll(): Promise<MaiaModel[]> {
@@ -63,7 +65,7 @@ export class MaiaModelsService {
         modelCategory: model.modelCategory,
         authenticationEndpoint: `${this.mapProviderToEndpoint(model.provider)}/Auth`,
         supportsDeepAnalysis: !!analysisPrompt,
-        modelPriority: model.modelPriority ?? undefined,
+        modelPriority: model.modelPriority ?? Number.MAX_SAFE_INTEGER,
         systemPrompt: systemPrompt?.content,
         analysisPrompt: analysisPrompt?.content,
         serverIp: host?.serverIp,
@@ -270,19 +272,26 @@ export class MaiaModelsService {
     };
   }
 
-  async softDelete(id: string, deletedById: string): Promise<void> {
+  async softDelete(id: string, deletedById?: string): Promise<void> {
     const model = await this.modelsRepository.findById(id);
     if (!model) {
       throw new NotFoundException('Model not found', 'MODEL_NOT_FOUND');
     }
 
-    await this.modelsRepository.softDelete(id, deletedById);
+    // Soft delete the model
+    await this.modelsRepository.softDelete(id, deletedById ?? '');
 
-    // Also soft delete the host
+    // Cascade: soft delete the host
     const host = await this.hostsRepository.findByModelId(id);
     if (host) {
-      await this.hostsRepository.softDelete(host.id, deletedById);
+      await this.hostsRepository.softDelete(host.id, deletedById ?? '');
     }
+
+    // Cascade: soft delete all prompts for this model
+    await this.promptsRepository.softDeleteByModelId(id, deletedById);
+
+    // Cascade: deactivate all user access for this model
+    await this.userAccessRepository.deactivateByModelId(id, deletedById);
   }
 
   private mapProviderToEndpoint(provider: string): string {

@@ -23,6 +23,13 @@ export class UserMaiaAccessService {
   }
 
   /**
+   * Get users with active access to a model
+   */
+  async getUsersWithAccess(maiaModelId: string) {
+    return this.accessRepository.findUsersWithModelAccess(maiaModelId);
+  }
+
+  /**
    * Grant or revoke user access to a model
    * Matches C# MAIAModelsController.ManageUserAccess()
    */

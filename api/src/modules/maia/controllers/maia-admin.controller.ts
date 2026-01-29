@@ -185,6 +185,16 @@ export class MaiaAdminController {
   // ========================
 
   /**
+   * GET /api/admin/maia/models/:modelId/users
+   * Get users with active access to this model
+   */
+  @Get('models/:modelId/users')
+  @ApiOperation({ summary: 'Get users with access to this model' })
+  async getUsersWithAccess(@Param('modelId') modelId: string) {
+    return this.userAccessService.getUsersWithAccess(modelId);
+  }
+
+  /**
    * GET /api/admin/maia/models/:modelId/available-users
    * Get users without access to this model
    * Matches C# MAIAModelsController.GetAvailableUsers()
@@ -214,6 +224,34 @@ export class MaiaAdminController {
       body.grantAccess,
       user.id,
     );
+  }
+
+  // ========================
+  // Options Endpoint
+  // ========================
+
+  /**
+   * GET /api/admin/maia/options
+   * Get enum options for dropdowns
+   */
+  @Get('options')
+  @ApiOperation({ summary: 'Get MAIA enum options for forms' })
+  getOptions() {
+    return {
+      categories: [
+        { value: 0, label: 'Balanced', dbValue: 'balanced' },
+        { value: 1, label: 'Thinking', dbValue: 'thinking' },
+        { value: 2, label: 'Live', dbValue: 'live' },
+      ],
+      providers: [
+        { value: 1, label: 'Google Cloud', dbValue: 'gcloud' },
+        { value: 2, label: 'OpenAI', dbValue: 'openai' },
+        { value: 3, label: 'Self-Hosted', dbValue: 'self' },
+      ],
+      hostProviders: [
+        { value: 1, label: 'AWS EC2', dbValue: 'aws_ec2' },
+      ],
+    };
   }
 
   // Helper methods for enum mapping

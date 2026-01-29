@@ -53,6 +53,96 @@ export interface MeResponse {
   currentDeviceId: string | null;
 }
 
+// =============================================================================
+// MAIA Types
+// =============================================================================
+
+export type ModelCategory = 'balanced' | 'thinking' | 'live';
+export type Provider = 'invalid' | 'gcloud' | 'openai' | 'self';
+export type HostProvider = 'invalid' | 'aws_ec2';
+export type PromptType = 'invalid' | 'system_prompt' | 'analysis_prompt';
+
+export interface MaiaModel {
+  id: string;
+  modelName: string;
+  modelDisplayName: string;
+  modelCategory: ModelCategory;
+  provider: Provider;
+  modelPriority: number | null;
+  pricing: number;
+  isActive: boolean;
+  createdDateTime: string;
+  modifiedDateTime: string | null;
+  modifiedByName: string | null;
+}
+
+export interface MaiaPrompt {
+  id: string;
+  type: PromptType;
+  content: string;
+  maiaModelId: string;
+  isActive: boolean;
+  createdDateTime: string;
+}
+
+export interface MaiaHost {
+  id: string;
+  hostProvider: HostProvider;
+  serverIp: string;
+  maiaModelId: string;
+}
+
+export interface MaiaModelWithRelations extends MaiaModel {
+  prompts: MaiaPrompt[];
+  host: MaiaHost | null;
+}
+
+export interface CreateMaiaModelInput {
+  modelName: string;
+  modelDisplayName: string;
+  modelCategory: number; // 0=balanced, 1=thinking, 2=live
+  provider: number; // 0=invalid, 1=gcloud, 2=openai, 3=self
+  modelPriority?: number;
+  pricing?: string;
+  isActive?: boolean;
+  hostProvider?: number;
+  serverIp?: string;
+}
+
+export interface UpdateMaiaModelInput extends Partial<CreateMaiaModelInput> {}
+
+export interface MaiaPromptInput {
+  type: number; // 1=system_prompt, 2=analysis_prompt
+  content: string;
+  isActive: boolean;
+}
+
+export interface MaiaEnumOption {
+  value: number;
+  label: string;
+  dbValue: string;
+}
+
+export interface MaiaOptions {
+  categories: MaiaEnumOption[];
+  providers: MaiaEnumOption[];
+  hostProviders: MaiaEnumOption[];
+}
+
+// User access types
+export interface MaiaUserAccess {
+  accessId: string;
+  userId: string;
+  name: string;
+  email: string;
+}
+
+export interface AvailableUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 // Legacy type for backwards compatibility
 export interface CurrentUser {
   user: {
@@ -158,6 +248,95 @@ class ApiClient {
   async getMe(): Promise<MeResponse> {
     const response = await this.request<MeResponse>('/me');
     return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Admin Endpoints
+  // ===========================================================================
+
+  async getMaiaOptions(): Promise<MaiaOptions> {
+    const response = await this.request<MaiaOptions>('/admin/maia/options');
+    return response.data!;
+  }
+
+  async getMaiaModels(): Promise<MaiaModel[]> {
+    const response = await this.request<MaiaModel[]>('/admin/maia/models');
+    return response.data ?? [];
+  }
+
+  async getMaiaModel(id: string): Promise<MaiaModelWithRelations> {
+    const response = await this.request<MaiaModelWithRelations>(`/admin/maia/models/${id}`);
+    return response.data!;
+  }
+
+  async createMaiaModel(data: CreateMaiaModelInput): Promise<MaiaModel> {
+    const response = await this.request<MaiaModel>('/admin/maia/models', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updateMaiaModel(id: string, data: UpdateMaiaModelInput): Promise<MaiaModel> {
+    const response = await this.request<MaiaModel>(`/admin/maia/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deleteMaiaModel(id: string): Promise<void> {
+    await this.request(`/admin/maia/models/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ===========================================================================
+  // MAIA User Access Endpoints
+  // ===========================================================================
+
+  async getUsersWithAccess(modelId: string): Promise<MaiaUserAccess[]> {
+    const response = await this.request<MaiaUserAccess[]>(`/admin/maia/models/${modelId}/users`);
+    return response.data ?? [];
+  }
+
+  async getAvailableUsers(modelId: string): Promise<AvailableUser[]> {
+    const response = await this.request<AvailableUser[]>(`/admin/maia/models/${modelId}/available-users`);
+    return response.data ?? [];
+  }
+
+  async manageUserAccess(modelId: string, userId: string, grantAccess: boolean): Promise<{ message: string }> {
+    const response = await this.request<{ message: string }>(`/admin/maia/models/${modelId}/access`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, grantAccess }),
+    });
+    return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Prompt Endpoints
+  // ===========================================================================
+
+  async createPrompt(modelId: string, data: MaiaPromptInput): Promise<MaiaPrompt> {
+    const response = await this.request<MaiaPrompt>(`/admin/maia/models/${modelId}/prompts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updatePrompt(promptId: string, data: MaiaPromptInput): Promise<MaiaPrompt> {
+    const response = await this.request<MaiaPrompt>(`/admin/maia/prompts/${promptId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deletePrompt(promptId: string): Promise<void> {
+    await this.request(`/admin/maia/prompts/${promptId}`, {
+      method: 'DELETE',
+    });
   }
 }
 

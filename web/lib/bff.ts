@@ -13,7 +13,7 @@ import { getSession } from './auth';
 import { API_URL } from './env';
 
 export interface BffRequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   searchParams?: Record<string, string>;
 }
@@ -72,7 +72,7 @@ export async function bffFetch<T>(
 
     // Handle empty responses (204 No Content, etc.)
     const text = await response.text();
-    let data: { data?: T; error?: { message?: string; code?: string }; meta?: BffResponse<T>['meta'] } | null = null;
+    let data: { data?: T; error?: { message?: string; code?: string }; message?: string | string[]; meta?: BffResponse<T>['meta'] } | any = null;
 
     if (text) {
       try {

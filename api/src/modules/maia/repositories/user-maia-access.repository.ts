@@ -55,7 +55,7 @@ export class UserMaiaAccessRepository {
    * Used for the "Add User Access" dropdown
    */
   async findUsersWithoutModelAccess(maiaModelId: string) {
-    // Get users who either don't have access or have inactive access
+    // Get users who have active access to this model
     const usersWithActiveAccess = await this.db
       .select({ userId: userMaiaAccess.userId })
       .from(userMaiaAccess)
@@ -68,27 +68,58 @@ export class UserMaiaAccessRepository {
 
     const activeUserIds = usersWithActiveAccess.map((u) => u.userId);
 
-    if (activeUserIds.length === 0) {
-      return this.db
-        .select({
-          id: users.id,
-          fullName: users.firstName,
-          email: users.email,
-        })
-        .from(users);
-    }
-
-    // Get all users not in the active access list
-    const availableUsers = await this.db
+    // Get all users
+    const allUsers = await this.db
       .select({
         id: users.id,
-        fullName: users.firstName,
+        firstName: users.firstName,
+        lastName: users.lastName,
         email: users.email,
       })
-      .from(users)
-      .where(not(eq(users.id, activeUserIds[0]))); // Simplified - should use notInArray
+      .from(users);
 
-    return availableUsers.filter((u) => !activeUserIds.includes(u.id));
+    // Filter out users who already have access and format the response
+    return allUsers
+      .filter((u) => !activeUserIds.includes(u.id))
+      .map((u) => ({
+        id: u.id,
+        name: u.firstName && u.lastName
+          ? `${u.firstName} ${u.lastName}`
+          : u.email,
+        email: u.email,
+      }));
+  }
+
+  /**
+   * Get users who have active access to a model (with user details)
+   */
+  async findUsersWithModelAccess(maiaModelId: string) {
+    const accessRecords = await this.db
+      .select({
+        accessId: userMaiaAccess.id,
+        userId: userMaiaAccess.userId,
+        isActive: userMaiaAccess.isActive,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(userMaiaAccess)
+      .innerJoin(users, eq(userMaiaAccess.userId, users.id))
+      .where(
+        and(
+          eq(userMaiaAccess.maiaModelId, maiaModelId),
+          eq(userMaiaAccess.isActive, true),
+        ),
+      );
+
+    return accessRecords.map((r) => ({
+      accessId: r.accessId,
+      userId: r.userId,
+      name: r.firstName && r.lastName
+        ? `${r.firstName} ${r.lastName}`
+        : r.email,
+      email: r.email,
+    }));
   }
 
   async create(data: Omit<NewUserMaiaAccess, 'id'>): Promise<UserMaiaAccessRecord> {
@@ -168,5 +199,25 @@ export class UserMaiaAccessRepository {
       .returning();
 
     return updated;
+  }
+
+  /**
+   * Deactivate all user access for a model
+   * Used when deleting a model to cascade the deactivation
+   */
+  async deactivateByModelId(maiaModelId: string, updatedById?: string): Promise<void> {
+    await this.db
+      .update(userMaiaAccess)
+      .set({
+        isActive: false,
+        updatedById,
+        updateDateTime: new Date(),
+      })
+      .where(
+        and(
+          eq(userMaiaAccess.maiaModelId, maiaModelId),
+          eq(userMaiaAccess.isActive, true),
+        ),
+      );
   }
 }

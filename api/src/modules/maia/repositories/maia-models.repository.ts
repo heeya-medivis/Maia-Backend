@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, isNull, desc, asc } from 'drizzle-orm';
+import { eq, and, desc, asc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { DATABASE_CONNECTION, Database } from '../../../database';
 import {
   maiaModels,
@@ -8,8 +9,13 @@ import {
   maiaHosts,
   maiaPrompts,
   userMaiaAccess,
+  users,
 } from '../../../database/schema';
 import { nanoid } from 'nanoid';
+
+export interface MaiaModelWithModifier extends MaiaModel {
+  modifiedByName: string | null;
+}
 
 @Injectable()
 export class MaiaModelsRepository {
@@ -18,12 +24,42 @@ export class MaiaModelsRepository {
     private readonly db: Database,
   ) {}
 
-  async findAll(): Promise<MaiaModel[]> {
-    return this.db
-      .select()
+  async findAll(): Promise<MaiaModelWithModifier[]> {
+    // Create aliases for joining users table twice
+    const modifiedByUser = alias(users, 'modified_by_user');
+    const createdByUser = alias(users, 'created_by_user');
+
+    const results = await this.db
+      .select({
+        model: maiaModels,
+        modifiedByFirstName: modifiedByUser.firstName,
+        modifiedByLastName: modifiedByUser.lastName,
+        modifiedByEmail: modifiedByUser.email,
+        createdByFirstName: createdByUser.firstName,
+        createdByLastName: createdByUser.lastName,
+        createdByEmail: createdByUser.email,
+      })
       .from(maiaModels)
+      .leftJoin(modifiedByUser, eq(maiaModels.modifiedById, modifiedByUser.id))
+      .leftJoin(createdByUser, eq(maiaModels.createdById, createdByUser.id))
       .where(eq(maiaModels.isDeleted, false))
       .orderBy(desc(maiaModels.isActive), asc(maiaModels.modelName));
+
+    return results.map((r) => {
+      // Use modifier name if available, otherwise fall back to creator
+      const modifierName = r.modifiedByFirstName && r.modifiedByLastName
+        ? `${r.modifiedByFirstName} ${r.modifiedByLastName}`
+        : r.modifiedByEmail;
+
+      const creatorName = r.createdByFirstName && r.createdByLastName
+        ? `${r.createdByFirstName} ${r.createdByLastName}`
+        : r.createdByEmail;
+
+      return {
+        ...r.model,
+        modifiedByName: modifierName ?? creatorName ?? null,
+      };
+    });
   }
 
   async findById(id: string): Promise<MaiaModel | null> {
