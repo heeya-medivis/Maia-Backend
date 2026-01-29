@@ -1,9 +1,9 @@
 'use client';
 
 import { Card, Button, Badge, Input, Select, Toggle } from '@/components/ui';
-import { Bot, Plus, Search, Settings, Trash2, Loader2, RefreshCw, X, Users, FileText, UserPlus, UserMinus } from 'lucide-react';
+import { Bot, Plus, Search, Settings, Trash2, Loader2, RefreshCw, X, Users, FileText, UserPlus, UserMinus, MessageSquare, Edit2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { api, MaiaModel, MaiaOptions, ApiClientError, CreateMaiaModelInput, MaiaUserAccess, AvailableUser } from '@/lib/api-client';
+import { api, MaiaModel, MaiaOptions, ApiClientError, CreateMaiaModelInput, MaiaUserAccess, AvailableUser, MaiaPrompt, MaiaPromptInput } from '@/lib/api-client';
 
 const initialFormState: CreateMaiaModelInput = {
   modelName: '',
@@ -17,7 +17,18 @@ const initialFormState: CreateMaiaModelInput = {
   serverIp: undefined,
 };
 
-type DetailTab = 'details' | 'access';
+type DetailTab = 'details' | 'access' | 'prompts';
+
+const PROMPT_TYPES = [
+  { value: 1, label: 'System Prompt', dbValue: 'system_prompt' },
+  { value: 2, label: 'Analysis Prompt', dbValue: 'analysis_prompt' },
+];
+
+const initialPromptFormState: MaiaPromptInput = {
+  type: 1,
+  content: '',
+  isActive: true,
+};
 
 export function MaiaModelsContent() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +51,14 @@ export function MaiaModelsContent() {
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [selectedUserToAdd, setSelectedUserToAdd] = useState<string>('');
+
+  // Prompts state
+  const [prompts, setPrompts] = useState<MaiaPrompt[]>([]);
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
+  const [promptFormData, setPromptFormData] = useState<MaiaPromptInput>(initialPromptFormState);
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [isPromptFormVisible, setIsPromptFormVisible] = useState(false);
+  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
 
   const isEditMode = selectedModel !== null;
 
@@ -76,6 +95,18 @@ export function MaiaModelsContent() {
     }
   }, []);
 
+  const fetchPrompts = useCallback(async (modelId: string) => {
+    setIsLoadingPrompts(true);
+    try {
+      const modelWithRelations = await api.getMaiaModel(modelId);
+      setPrompts(modelWithRelations.prompts);
+    } catch (err) {
+      console.error('Failed to fetch prompts:', err);
+    } finally {
+      setIsLoadingPrompts(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchModels();
     api.getMaiaOptions().then(setOptions).catch(console.error);
@@ -87,6 +118,13 @@ export function MaiaModelsContent() {
       fetchUserAccess(selectedModel.id);
     }
   }, [showDetailPanel, selectedModel, activeTab, fetchUserAccess]);
+
+  // Fetch prompts when switching to prompts tab or when model changes
+  useEffect(() => {
+    if (showDetailPanel && selectedModel && activeTab === 'prompts') {
+      fetchPrompts(selectedModel.id);
+    }
+  }, [showDetailPanel, selectedModel, activeTab, fetchPrompts]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this model?')) return;
@@ -112,6 +150,10 @@ export function MaiaModelsContent() {
     setUsersWithAccess([]);
     setAvailableUsers([]);
     setSelectedUserToAdd('');
+    setPrompts([]);
+    setPromptFormData(initialPromptFormState);
+    setEditingPromptId(null);
+    setIsPromptFormVisible(false);
   }, []);
 
   const handleOpenCreate = useCallback(() => {
@@ -215,6 +257,72 @@ export function MaiaModelsContent() {
       }
     }
   }, [selectedModel, fetchUserAccess]);
+
+  // Prompt handlers
+  const handleShowPromptForm = useCallback((prompt?: MaiaPrompt) => {
+    if (prompt) {
+      // Edit mode
+      const typeValue = PROMPT_TYPES.find(t => t.dbValue === prompt.type)?.value ?? 1;
+      setPromptFormData({
+        type: typeValue,
+        content: prompt.content,
+        isActive: prompt.isActive,
+      });
+      setEditingPromptId(prompt.id);
+    } else {
+      // Create mode
+      setPromptFormData(initialPromptFormState);
+      setEditingPromptId(null);
+    }
+    setIsPromptFormVisible(true);
+  }, []);
+
+  const handleCancelPromptForm = useCallback(() => {
+    setIsPromptFormVisible(false);
+    setPromptFormData(initialPromptFormState);
+    setEditingPromptId(null);
+  }, []);
+
+  const handleSavePrompt = useCallback(async () => {
+    if (!selectedModel) return;
+
+    setIsSubmittingPrompt(true);
+    try {
+      if (editingPromptId) {
+        // Update existing prompt
+        await api.updatePrompt(editingPromptId, promptFormData);
+      } else {
+        // Create new prompt
+        await api.createPrompt(selectedModel.id, promptFormData);
+      }
+      fetchPrompts(selectedModel.id);
+      handleCancelPromptForm();
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to save prompt: ${err.message}`);
+      }
+    } finally {
+      setIsSubmittingPrompt(false);
+    }
+  }, [selectedModel, editingPromptId, promptFormData, fetchPrompts, handleCancelPromptForm]);
+
+  const handleDeletePrompt = useCallback(async (promptId: string) => {
+    if (!selectedModel) return;
+    if (!confirm('Are you sure you want to delete this prompt?')) return;
+
+    try {
+      await api.deletePrompt(promptId);
+      fetchPrompts(selectedModel.id);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        alert(`Failed to delete prompt: ${err.message}`);
+      }
+    }
+  }, [selectedModel, fetchPrompts]);
+
+  const getPromptTypeLabel = (type: string) => {
+    return PROMPT_TYPES.find(t => t.dbValue === type)?.label ?? type;
+  };
 
   const filteredModels = models.filter(model =>
     model.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -448,13 +556,29 @@ export function MaiaModelsContent() {
                       </span>
                     )}
                   </button>
+                  <button
+                    onClick={() => setActiveTab('prompts')}
+                    className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === 'prompts'
+                        ? 'border-[var(--accent)] text-white'
+                        : 'border-transparent text-[var(--muted)] hover:text-white'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4 inline-block mr-2" />
+                    Prompts
+                    {prompts.length > 0 && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-[var(--card-hover)] rounded text-xs">
+                        {prompts.length}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
 
             {/* Content */}
             <div className="flex-1 overflow-auto p-6">
-              {activeTab === 'details' ? (
+              {activeTab === 'details' && (
                 /* Model Details Form */
                 <div className="grid grid-cols-2 gap-6">
                   {/* Left Column */}
@@ -554,7 +678,9 @@ export function MaiaModelsContent() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {activeTab === 'access' && (
                 /* User Access Tab */
                 <div className="grid grid-cols-2 gap-6">
                   {/* Add User Section */}
@@ -627,6 +753,125 @@ export function MaiaModelsContent() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'prompts' && (
+                /* Prompts Tab */
+                <div className="space-y-4">
+                  {/* Add/Edit Prompt Form */}
+                  {isPromptFormVisible ? (
+                    <div className="p-4 bg-[var(--card-hover)] rounded-lg space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium">
+                          {editingPromptId ? 'Edit Prompt' : 'New Prompt'}
+                        </h3>
+                        <Button variant="ghost" size="sm" onClick={handleCancelPromptForm}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Prompt Type *</label>
+                        <Select
+                          options={PROMPT_TYPES.map(t => ({ value: String(t.value), label: t.label }))}
+                          value={String(promptFormData.type)}
+                          onChange={(val) => setPromptFormData(prev => ({ ...prev, type: parseInt(val) }))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Content *</label>
+                        <textarea
+                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm min-h-[200px] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] resize-y"
+                          placeholder="Enter prompt content..."
+                          value={promptFormData.content}
+                          onChange={(e) => setPromptFormData(prev => ({ ...prev, content: e.target.value }))}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <Toggle
+                          checked={promptFormData.isActive}
+                          onChange={(checked) => setPromptFormData(prev => ({ ...prev, isActive: checked }))}
+                          label="Prompt is active"
+                        />
+                        <Button
+                          variant="primary"
+                          onClick={handleSavePrompt}
+                          disabled={isSubmittingPrompt || !promptFormData.content.trim()}
+                        >
+                          {isSubmittingPrompt ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            editingPromptId ? 'Update Prompt' : 'Create Prompt'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="primary" onClick={() => handleShowPromptForm()}>
+                      <Plus className="w-4 h-4" />
+                      Add Prompt
+                    </Button>
+                  )}
+
+                  {/* Prompts List */}
+                  {isLoadingPrompts ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+                    </div>
+                  ) : prompts.length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-[var(--border)] rounded-lg">
+                      <MessageSquare className="w-10 h-10 text-[var(--muted)] mx-auto mb-3" />
+                      <p className="text-sm text-[var(--muted)]">No prompts configured for this model.</p>
+                      <p className="text-xs text-[var(--muted)] mt-1">Create a system prompt or analysis prompt to get started.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {prompts.map((prompt) => (
+                        <div
+                          key={prompt.id}
+                          className="p-4 bg-[var(--card-hover)] rounded-lg"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={prompt.isActive ? 'success' : 'default'}>
+                                {prompt.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                              <span className="text-sm font-medium">{getPromptTypeLabel(prompt.type)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleShowPromptForm(prompt)}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-[var(--danger)]"
+                                onClick={() => handleDeletePrompt(prompt.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <pre className="text-xs text-[var(--muted)] whitespace-pre-wrap break-words max-h-40 overflow-auto bg-[var(--background)] p-3 rounded">
+                            {prompt.content}
+                          </pre>
+                          <p className="text-xs text-[var(--muted)] mt-2">
+                            Created: {new Date(prompt.createdDateTime).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

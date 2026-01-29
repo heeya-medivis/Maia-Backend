@@ -111,6 +111,12 @@ export interface CreateMaiaModelInput {
 
 export interface UpdateMaiaModelInput extends Partial<CreateMaiaModelInput> {}
 
+export interface MaiaPromptInput {
+  type: number; // 1=system_prompt, 2=analysis_prompt
+  content: string;
+  isActive: boolean;
+}
+
 export interface MaiaEnumOption {
   value: number;
   label: string;
@@ -305,6 +311,32 @@ class ApiClient {
       body: JSON.stringify({ userId, grantAccess }),
     });
     return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Prompt Endpoints
+  // ===========================================================================
+
+  async createPrompt(modelId: string, data: MaiaPromptInput): Promise<MaiaPrompt> {
+    const response = await this.request<MaiaPrompt>(`/admin/maia/models/${modelId}/prompts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async updatePrompt(promptId: string, data: MaiaPromptInput): Promise<MaiaPrompt> {
+    const response = await this.request<MaiaPrompt>(`/admin/maia/prompts/${promptId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data!;
+  }
+
+  async deletePrompt(promptId: string): Promise<void> {
+    await this.request(`/admin/maia/prompts/${promptId}`, {
+      method: 'DELETE',
+    });
   }
 }
 

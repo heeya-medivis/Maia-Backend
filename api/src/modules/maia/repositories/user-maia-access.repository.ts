@@ -200,4 +200,24 @@ export class UserMaiaAccessRepository {
 
     return updated;
   }
+
+  /**
+   * Deactivate all user access for a model
+   * Used when deleting a model to cascade the deactivation
+   */
+  async deactivateByModelId(maiaModelId: string, updatedById?: string): Promise<void> {
+    await this.db
+      .update(userMaiaAccess)
+      .set({
+        isActive: false,
+        updatedById,
+        updateDateTime: new Date(),
+      })
+      .where(
+        and(
+          eq(userMaiaAccess.maiaModelId, maiaModelId),
+          eq(userMaiaAccess.isActive, true),
+        ),
+      );
+  }
 }

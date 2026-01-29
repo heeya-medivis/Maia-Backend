@@ -119,4 +119,24 @@ export class MaiaPromptsRepository {
           : and(...conditions),
       );
   }
+
+  /**
+   * Soft delete all prompts for a model
+   * Used when deleting a model to cascade the deletion
+   */
+  async softDeleteByModelId(maiaModelId: string, deletedById?: string): Promise<void> {
+    await this.db
+      .update(maiaPrompts)
+      .set({
+        isDeleted: true,
+        deletedDateTime: new Date(),
+        deletedById,
+      })
+      .where(
+        and(
+          eq(maiaPrompts.maiaModelId, maiaModelId),
+          eq(maiaPrompts.isDeleted, false),
+        ),
+      );
+  }
 }
