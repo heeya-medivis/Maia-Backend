@@ -143,6 +143,50 @@ export interface AvailableUser {
   email: string;
 }
 
+// Chat session types
+export interface MaiaChatSession {
+  id: string;
+  userId: string;
+  providerSessionId: string;
+  startTime: string;
+  endTime: string | null;
+  isActive: boolean;
+  totalInputTextTokens: number;
+  totalInputImageTokens: number;
+  totalInputAudioTokens: number;
+  totalOutputTextTokens: number;
+  totalOutputAudioTokens: number;
+  createdAt: string;
+}
+
+export interface MaiaChatTurn {
+  id: string;
+  sessionId: string;
+  requestTime: string;
+  responseTime: string;
+  inputTextTokens: number;
+  inputImageTokens: number;
+  inputAudioTokens: number;
+  outputTextTokens: number;
+  outputAudioTokens: number;
+  createdAt: string;
+}
+
+export interface MaiaChatSessionWithTurns {
+  session: MaiaChatSession;
+  turns: MaiaChatTurn[];
+}
+
+// Deep analysis types
+export interface MaiaDeepAnalysis {
+  id: string;
+  userId: string;
+  requestTime: string;
+  inputTokens: number;
+  outputTokens: number;
+  createdAt: string;
+}
+
 // Legacy type for backwards compatibility
 export interface CurrentUser {
   user: {
@@ -187,6 +231,83 @@ export interface UpdateUserData {
   organization?: string | null;
   role?: string | null;
   isAdmin?: boolean;
+}
+
+// =============================================================================
+// Admin Usage Types
+// =============================================================================
+
+export interface OverallUsageStats {
+  totalUsers: number;
+  totalOrganizations: number;
+  totalChatSessions: number;
+  totalDeepAnalyses: number;
+  totalChatInputTokens: number;
+  totalChatOutputTokens: number;
+  totalDeepAnalysisInputTokens: number;
+  totalDeepAnalysisOutputTokens: number;
+  totalTokens: number;
+  activeChatSessions: number;
+}
+
+export interface UserUsageStats {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  organization: string | null;
+  chatSessionCount: number;
+  chatInputTokens: number;
+  chatOutputTokens: number;
+  deepAnalysisCount: number;
+  deepAnalysisInputTokens: number;
+  deepAnalysisOutputTokens: number;
+  totalTokens: number;
+}
+
+export interface OrganizationUsageStats {
+  organization: string;
+  userCount: number;
+  chatSessionCount: number;
+  chatInputTokens: number;
+  chatOutputTokens: number;
+  deepAnalysisCount: number;
+  deepAnalysisInputTokens: number;
+  deepAnalysisOutputTokens: number;
+  totalTokens: number;
+}
+
+export interface DateRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface UserDetailInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  organization: string | null;
+}
+
+export interface UserDetailData {
+  user: UserDetailInfo;
+  chatSessions: MaiaChatSession[];
+  deepAnalyses: MaiaDeepAnalysis[];
+}
+
+export interface OrgUserInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface OrganizationDetailData {
+  organization: string;
+  users: OrgUserInfo[];
+  chatSessions: MaiaChatSession[];
+  deepAnalyses: MaiaDeepAnalysis[];
 }
 
 // =============================================================================
@@ -379,6 +500,78 @@ class ApiClient {
     await this.request(`/admin/maia/prompts/${promptId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ===========================================================================
+  // Admin Usage Endpoints
+  // ===========================================================================
+
+  async getAdminUsageStats(params?: DateRangeParams): Promise<OverallUsageStats> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/stats${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<OverallUsageStats>(path);
+    return response.data!;
+  }
+
+  async getAdminUsageByUser(params?: DateRangeParams): Promise<UserUsageStats[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/by-user${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<UserUsageStats[]>(path);
+    return response.data ?? [];
+  }
+
+  async getAdminUsageByOrganization(params?: DateRangeParams): Promise<OrganizationUsageStats[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/by-organization${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<OrganizationUsageStats[]>(path);
+    return response.data ?? [];
+  }
+
+  async getAdminUserDetail(userId: string): Promise<UserDetailData> {
+    const response = await this.request<UserDetailData>(`/admin/usage/user/${userId}`);
+    return response.data!;
+  }
+
+  async getAdminOrganizationDetail(organizationName: string): Promise<OrganizationDetailData> {
+    const response = await this.request<OrganizationDetailData>(`/admin/usage/organization/${encodeURIComponent(organizationName)}`);
+    return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Chat Session Endpoints
+  // ===========================================================================
+
+  async getChatSessions(): Promise<MaiaChatSession[]> {
+    const response = await this.request<MaiaChatSession[]>('/maia-chat');
+    return response.data ?? [];
+  }
+
+  async getChatSession(sessionId: string): Promise<MaiaChatSessionWithTurns> {
+    const response = await this.request<MaiaChatSessionWithTurns>(`/maia-chat/${sessionId}`);
+    return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Deep Analysis Endpoints
+  // ===========================================================================
+
+  async getDeepAnalyses(): Promise<MaiaDeepAnalysis[]> {
+    const response = await this.request<MaiaDeepAnalysis[]>('/maia-deep-analysis');
+    return response.data ?? [];
+  }
+
+  async getDeepAnalysis(analysisId: string): Promise<MaiaDeepAnalysis> {
+    const response = await this.request<MaiaDeepAnalysis>(`/maia-deep-analysis/${analysisId}`);
+    return response.data!;
   }
 }
 

@@ -7,7 +7,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { MaiaModule } from './modules/maia/maia.module';
+import { MaiaChatModule } from './modules/maia-chat/maia-chat.module';
+import { MaiaDeepAnalysisModule } from './modules/maia-deep-analysis/maia-deep-analysis.module';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
+import { AdminUsageModule } from './modules/admin-usage/admin-usage.module';
 
 import { HealthController } from './health.controller';
 
@@ -19,7 +22,10 @@ import { HealthController } from './health.controller';
     UsersModule,
     WebhooksModule,
     MaiaModule,
+    MaiaChatModule,
+    MaiaDeepAnalysisModule,
     AiProvidersModule,
+    AdminUsageModule,
   ],
   controllers: [HealthController],
   providers: [],

@@ -17,6 +17,7 @@ export * from './maia-models';
 export * from './maia-hosts';
 export * from './maia-prompts';
 export * from './user-maia-access';
+export * from './maia-chat-sessions';
 
 // Audit
 export * from './audit';
