@@ -50,6 +50,13 @@
       "when": 1769794940390,
       "tag": "0006_bent_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769809288055,
+      "tag": "0007_third_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

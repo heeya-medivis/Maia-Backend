@@ -1,4 +1,31 @@
-import { IsString, IsBoolean, IsOptional, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  MaxLength,
+  IsIn,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+  Validate,
+} from 'class-validator';
+import { OrganizationRole } from '../../../database/schema/users';
+
+@ValidatorConstraint({ name: 'orgRolePair', async: false })
+class OrgRolePairConstraint implements ValidatorConstraintInterface {
+  validate(_: unknown, args?: ValidationArguments): boolean {
+    if (!args) return true;
+    const obj = args.object as UpdateUserDto;
+    const hasOrg = obj.organization !== undefined && obj.organization !== null && obj.organization !== '';
+    const hasRole = obj.role !== undefined && obj.role !== null;
+    // Both must be set or both must be empty
+    return hasOrg === hasRole;
+  }
+
+  defaultMessage(): string {
+    return 'Organization and role must both be set or both be empty';
+  }
+}
 
 export class UpdateUserDto {
   @IsOptional()
@@ -17,9 +44,9 @@ export class UpdateUserDto {
   organization?: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  role?: string | null;
+  @IsIn(['manager', 'member'])
+  @Validate(OrgRolePairConstraint)
+  role?: OrganizationRole | null;
 
   @IsOptional()
   @IsBoolean()
