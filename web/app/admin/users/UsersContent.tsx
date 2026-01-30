@@ -1,9 +1,9 @@
 'use client';
 
-import { Card, Button, Badge, Input, Modal } from '@/components/ui';
+import { Card, Button, Badge, Input, Modal, Select } from '@/components/ui';
 import { Users, Search, Shield, Mail, Calendar, Loader2, RefreshCw, Building2, Briefcase, Globe, Smartphone, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { api, AdminUser, UpdateUserData, ApiClientError } from '@/lib/api-client';
+import { api, AdminUser, UpdateUserData, ApiClientError, OrganizationRole } from '@/lib/api-client';
 
 export function UsersContent() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,8 +46,19 @@ export function UsersContent() {
     });
   };
 
+  const isOrgRoleValid = () => {
+    const hasOrg = editForm.organization !== undefined && editForm.organization !== null && editForm.organization !== '';
+    const hasRole = editForm.role !== undefined && editForm.role !== null;
+    return hasOrg === hasRole;
+  };
+
   const handleSaveUser = async () => {
     if (!editingUser) return;
+
+    if (!isOrgRoleValid()) {
+      setError('Organization and role must both be set or both be empty');
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -268,18 +279,36 @@ export function UsersContent() {
               <label className="block text-sm font-medium mb-1">Organization</label>
               <Input
                 value={editForm.organization ?? ''}
-                onChange={(e) => setEditForm({ ...editForm, organization: e.target.value || null })}
+                onChange={(e) => {
+                  const org = e.target.value || null;
+                  // Clear role if organization is cleared
+                  setEditForm({
+                    ...editForm,
+                    organization: org,
+                    role: org ? editForm.role : null,
+                  });
+                }}
                 placeholder="Organization (optional)"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">Role</label>
-              <Input
+              <Select
+                options={[
+                  { value: '', label: 'No role' },
+                  { value: 'manager', label: 'Manager' },
+                  { value: 'member', label: 'Member' },
+                ]}
                 value={editForm.role ?? ''}
-                onChange={(e) => setEditForm({ ...editForm, role: e.target.value || null })}
-                placeholder="Role (optional)"
+                onChange={(value) => setEditForm({ ...editForm, role: (value || null) as OrganizationRole | null })}
               />
+              {!editForm.organization && editForm.role && (
+                <p className="text-xs text-[var(--danger)] mt-1">Role requires an organization</p>
+              )}
+              {editForm.organization && !editForm.role && (
+                <p className="text-xs text-[var(--warning)] mt-1">Organization members should have a role</p>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -300,7 +329,7 @@ export function UsersContent() {
               <Button variant="ghost" onClick={() => setEditingUser(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveUser} disabled={isSaving}>
+              <Button onClick={handleSaveUser} disabled={isSaving || !isOrgRoleValid()}>
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
               </Button>
             </div>

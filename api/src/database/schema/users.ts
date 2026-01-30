@@ -1,10 +1,21 @@
 import {
   pgTable,
+  pgEnum,
   text,
   timestamp,
   boolean,
   index,
 } from 'drizzle-orm/pg-core';
+
+/**
+ * Organization role enum - defines user's role within their organization
+ */
+export const organizationRoleEnum = pgEnum('organization_role', [
+  'manager',
+  'member',
+]);
+
+export type OrganizationRole = 'manager' | 'member';
 
 /**
  * Users table - Converted from C# ApplicationUser : IdentityUser
@@ -26,7 +37,7 @@ export const users = pgTable(
 
     // Organization and role (null for users who sign up without an org)
     organization: text('organization'),
-    role: text('role'),
+    role: organizationRoleEnum('role'),
 
     // Admin flag - platform-level admin access
     // Only Maia company employees should have this

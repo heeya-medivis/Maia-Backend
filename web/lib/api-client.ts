@@ -212,13 +212,15 @@ export interface CurrentUser {
 // Admin User Types
 // =============================================================================
 
+export type OrganizationRole = 'manager' | 'member';
+
 export interface AdminUser {
   id: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
   organization: string | null;
-  role: string | null;
+  role: OrganizationRole | null;
   isAdmin: boolean;
   lastLoginWeb: string | null;
   lastLoginApp: string | null;
@@ -229,8 +231,13 @@ export interface UpdateUserData {
   firstName?: string;
   lastName?: string;
   organization?: string | null;
-  role?: string | null;
+  role?: OrganizationRole | null;
   isAdmin?: boolean;
+}
+
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
 }
 
 // =============================================================================
@@ -394,6 +401,15 @@ class ApiClient {
   async getMe(): Promise<MeResponse> {
     const response = await this.request<MeResponse>('/me');
     return response.data!;
+  }
+
+  async updateProfile(data: UpdateProfileData): Promise<MeResponse> {
+    await this.request<{ user: MeResponse['user'] }>('/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    // Re-fetch full profile to get devices etc.
+    return this.getMe();
   }
 
   // ===========================================================================
