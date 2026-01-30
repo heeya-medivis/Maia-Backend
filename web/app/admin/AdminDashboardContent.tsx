@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, Badge } from '@/components/ui';
-import { Users, Bot, Server, Activity, TrendingUp, Shield } from 'lucide-react';
+import { Users, Bot, Server, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export function AdminDashboardContent() {
@@ -10,7 +10,6 @@ export function AdminDashboardContent() {
     totalUsers: 0,
     activeModels: 0,
     activeHosts: 0,
-    todayRequests: 0,
   };
 
   return (
@@ -21,7 +20,7 @@ export function AdminDashboardContent() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -54,18 +53,6 @@ export function AdminDashboardContent() {
             </div>
             <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
               <Server className="w-6 h-6 text-green-400" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-[var(--muted)]">Today&apos;s Requests</p>
-              <p className="text-2xl font-bold mt-1">{stats.todayRequests}</p>
-            </div>
-            <div className="w-12 h-12 bg-[var(--accent-muted)] rounded-lg flex items-center justify-center">
-              <Activity className="w-6 h-6 text-[var(--accent)]" />
             </div>
           </div>
         </Card>

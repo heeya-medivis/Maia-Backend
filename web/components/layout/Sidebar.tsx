@@ -14,6 +14,8 @@ import {
   Server,
   Bot,
   KeyRound,
+  MessageSquare,
+  TrendingUp,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -33,6 +35,7 @@ export function Sidebar({ isAdmin = false, userName = 'User', orgName = 'Organiz
 
   const userNavItems: NavItem[] = [
     { href: '/user', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { href: '/user/usage', label: 'Usage', icon: <TrendingUp className="w-5 h-5" /> },
     { href: '/user/settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -42,6 +45,7 @@ export function Sidebar({ isAdmin = false, userName = 'User', orgName = 'Organiz
     { href: '/admin/sso', label: 'SSO / Enterprise', icon: <KeyRound className="w-5 h-5" /> },
     { href: '/admin/maia-models', label: 'Maia Management', icon: <Bot className="w-5 h-5" /> },
     { href: '/admin/maia-hosts', label: 'Maia Hosts', icon: <Server className="w-5 h-5" /> },
+    { href: '/admin/sessions', label: 'Chat Sessions', icon: <MessageSquare className="w-5 h-5" /> },
   ];
 
   return (

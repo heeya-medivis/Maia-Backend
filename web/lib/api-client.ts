@@ -143,6 +143,50 @@ export interface AvailableUser {
   email: string;
 }
 
+// Chat session types
+export interface MaiaChatSession {
+  id: string;
+  userId: string;
+  providerSessionId: string;
+  startTime: string;
+  endTime: string | null;
+  isActive: boolean;
+  totalInputTextTokens: number;
+  totalInputImageTokens: number;
+  totalInputAudioTokens: number;
+  totalOutputTextTokens: number;
+  totalOutputAudioTokens: number;
+  createdAt: string;
+}
+
+export interface MaiaChatTurn {
+  id: string;
+  sessionId: string;
+  requestTime: string;
+  responseTime: string;
+  inputTextTokens: number;
+  inputImageTokens: number;
+  inputAudioTokens: number;
+  outputTextTokens: number;
+  outputAudioTokens: number;
+  createdAt: string;
+}
+
+export interface MaiaChatSessionWithTurns {
+  session: MaiaChatSession;
+  turns: MaiaChatTurn[];
+}
+
+// Deep analysis types
+export interface MaiaDeepAnalysis {
+  id: string;
+  userId: string;
+  requestTime: string;
+  inputTokens: number;
+  outputTokens: number;
+  createdAt: string;
+}
+
 // Legacy type for backwards compatibility
 export interface CurrentUser {
   user: {
@@ -379,6 +423,34 @@ class ApiClient {
     await this.request(`/admin/maia/prompts/${promptId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ===========================================================================
+  // MAIA Chat Session Endpoints
+  // ===========================================================================
+
+  async getChatSessions(): Promise<MaiaChatSession[]> {
+    const response = await this.request<MaiaChatSession[]>('/maia-chat');
+    return response.data ?? [];
+  }
+
+  async getChatSession(sessionId: string): Promise<MaiaChatSessionWithTurns> {
+    const response = await this.request<MaiaChatSessionWithTurns>(`/maia-chat/${sessionId}`);
+    return response.data!;
+  }
+
+  // ===========================================================================
+  // MAIA Deep Analysis Endpoints
+  // ===========================================================================
+
+  async getDeepAnalyses(): Promise<MaiaDeepAnalysis[]> {
+    const response = await this.request<MaiaDeepAnalysis[]>('/maia-deep-analysis');
+    return response.data ?? [];
+  }
+
+  async getDeepAnalysis(analysisId: string): Promise<MaiaDeepAnalysis> {
+    const response = await this.request<MaiaDeepAnalysis>(`/maia-deep-analysis/${analysisId}`);
+    return response.data!;
   }
 }
 
