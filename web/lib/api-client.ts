@@ -233,6 +233,11 @@ export interface UpdateUserData {
   isAdmin?: boolean;
 }
 
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+}
+
 // =============================================================================
 // Admin Usage Types
 // =============================================================================
@@ -394,6 +399,15 @@ class ApiClient {
   async getMe(): Promise<MeResponse> {
     const response = await this.request<MeResponse>('/me');
     return response.data!;
+  }
+
+  async updateProfile(data: UpdateProfileData): Promise<MeResponse> {
+    await this.request<{ user: MeResponse['user'] }>('/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    // Re-fetch full profile to get devices etc.
+    return this.getMe();
   }
 
   // ===========================================================================
