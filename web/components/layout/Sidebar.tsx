@@ -41,8 +41,8 @@ export function Sidebar({ isAdmin = false, userName = 'User', orgName = 'Organiz
     { href: '/admin', label: 'Admin Dashboard', icon: <Shield className="w-5 h-5" /> },
     { href: '/admin/users', label: 'Users', icon: <Users className="w-5 h-5" /> },
     { href: '/admin/sso', label: 'SSO / Enterprise', icon: <KeyRound className="w-5 h-5" /> },
-    { href: '/admin/maia-models', label: 'Maia Management', icon: <Bot className="w-5 h-5" /> },
-    { href: '/admin/sessions', label: 'Maia Usage', icon: <TrendingUp className="w-5 h-5" /> },
+    { href: '/admin/maia-models', label: 'Model Management', icon: <Bot className="w-5 h-5" /> },
+    { href: '/admin/sessions', label: 'Usage Analytics', icon: <TrendingUp className="w-5 h-5" /> },
   ];
 
   return (

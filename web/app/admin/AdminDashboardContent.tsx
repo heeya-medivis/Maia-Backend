@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, Badge } from '@/components/ui';
-import { Users, Bot, Shield, TrendingUp, Loader2 } from 'lucide-react';
+import { Card } from '@/components/ui';
+import { Users, Bot, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { api, useApi } from '@/lib/api-client';
 
@@ -74,7 +74,7 @@ export function AdminDashboardContent() {
                 <Bot className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <h3 className="font-medium">Maia Management</h3>
+                <h3 className="font-medium">Model Management</h3>
                 <p className="text-sm text-[var(--muted)]">Configure AI models</p>
               </div>
             </div>
@@ -88,35 +88,13 @@ export function AdminDashboardContent() {
                 <TrendingUp className="w-6 h-6 text-orange-400" />
               </div>
               <div>
-                <h3 className="font-medium">Maia Usage</h3>
+                <h3 className="font-medium">Usage Analytics</h3>
                 <p className="text-sm text-[var(--muted)]">Monitor token usage</p>
               </div>
             </div>
           </Card>
         </Link>
       </div>
-
-      {/* System Status */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5 text-[var(--accent)]" />
-          <h3 className="font-medium">System Status</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg">
-            <span className="text-sm">API Server</span>
-            <Badge variant="success">Operational</Badge>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg">
-            <span className="text-sm">Database</span>
-            <Badge variant="success">Operational</Badge>
-          </div>
-          <div className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg">
-            <span className="text-sm">AI Services</span>
-            <Badge variant="success">Operational</Badge>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
