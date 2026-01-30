@@ -1,6 +1,5 @@
 'use client';
 
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, Input } from '@/components/ui';
 import { User, Bell, ShieldCheck, Loader2 } from 'lucide-react';
 import { useCurrentUser } from '@/lib/api-client';
@@ -10,30 +9,25 @@ export default function UserSettingsPage() {
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-[var(--danger)] mb-2">Failed to load user data</p>
-            <p className="text-sm text-[var(--muted)]">{error.message}</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-[var(--danger)] mb-2">Failed to load user data</p>
+          <p className="text-sm text-[var(--muted)]">{error.message}</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout isAdmin={currentUser?.user?.isAdmin}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-[var(--muted)]">Manage profile, security, and notifications.</p>
@@ -110,8 +104,7 @@ export default function UserSettingsPage() {
               <input type="checkbox" defaultChecked disabled />
             </label>
           </div>
-        </Card>
-      </div>
-    </DashboardLayout>
+      </Card>
+    </div>
   );
 }
