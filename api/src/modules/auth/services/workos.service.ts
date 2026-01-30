@@ -6,7 +6,8 @@ import type {
   Connection,
   AutoPaginatable,
   SerializedListConnectionsOptions,
-  PasswordlessSession,
+  MagicAuth,
+  AuthenticationResponse,
 } from '@workos-inc/node';
 
 export interface WorkOSSsoOptions {
@@ -171,22 +172,34 @@ export class WorkOSService {
   }
 
   /**
-   * Create a magic link session for passwordless authentication
+   * Create a magic auth code for passwordless authentication (6-digit code)
+   * This creates and emails a 6-digit one-time code to the user
+   * @see https://workos.com/docs/reference/authkit/magic-auth/create
    */
-  async createMagicLinkSession(email: string, redirectUri: string, state: string): Promise<PasswordlessSession> {
-    return this.workos.passwordless.createSession({
+  async createMagicAuth(email: string): Promise<MagicAuth> {
+    return this.workos.userManagement.createMagicAuth({
       email,
-      type: 'MagicLink',
-      redirectURI: redirectUri,
-      state,
     });
   }
 
   /**
-   * Send a magic link email
+   * Verify the 6-digit code and authenticate the user
+   * Returns WorkOS user and tokens
+   * @see https://workos.com/docs/reference/authkit/authentication/magic-auth
    */
-  async sendMagicLink(sessionId: string): Promise<void> {
-    await this.workos.passwordless.sendSession(sessionId);
+  async authenticateWithMagicAuth(
+    email: string,
+    code: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthenticationResponse> {
+    return this.workos.userManagement.authenticateWithMagicAuth({
+      clientId: this.clientId,
+      email,
+      code,
+      ipAddress,
+      userAgent,
+    });
   }
 
   /**

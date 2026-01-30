@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
-type Phase = 'email' | 'org-sso' | 'org-options' | 'sso-required' | 'invite' | 'welcome-back' | 'magic-link-sent' | 'loading';
+type Phase = 'email' | 'org-sso' | 'org-options' | 'sso-required' | 'invite' | 'welcome-back' | 'magic-code-entry' | 'loading';
 type Provider = 'google' | 'microsoft' | 'apple';
 type AuthMethod = Provider | 'sso' | 'magic_link';
 
@@ -127,6 +127,7 @@ function LoginContent() {
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [savedPreference, setSavedPreference] = useState<SavedLoginPreference | null>(null);
+  const [magicCode, setMagicCode] = useState('');
 
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') ?? '/user';
@@ -377,9 +378,9 @@ function LoginContent() {
   };
 
   const handleMagicLink = async () => {
-    // Magic link doesn't work with Unity callback mode - the email opens in browser, not Unity
+    // Magic code auth doesn't work with Unity callback mode
     if (isUnityCallback) {
-      setError('Magic link is not available for desktop app login. Please use Google, Microsoft, or Apple sign-in.');
+      setError('Email verification is not available for desktop app login. Please use Google, Microsoft, or Apple sign-in.');
       return;
     }
 
@@ -392,13 +393,10 @@ function LoginContent() {
     setError(null);
 
     try {
-      const response = await fetch('/api/bff/auth/magic-link', {
+      const response = await fetch('/api/bff/auth/magic-auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          redirect_uri: redirect, // Pass the path (e.g., /user, /org) - BFF handles the callback URL
-        }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
@@ -409,15 +407,52 @@ function LoginContent() {
           setPhase('sso-required');
           return;
         }
-        throw new Error(data.error?.message || 'Failed to send magic link');
+        throw new Error(data.error?.message || 'Failed to send verification code');
       }
 
       // Save preference for next time
       saveLoginPreference({ email, method: 'magic_link', methodLabel: 'Magic Link' });
 
-      setPhase('magic-link-sent');
+      // Go to code entry phase
+      setMagicCode('');
+      setPhase('magic-code-entry');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send magic link');
+      setError(err instanceof Error ? err.message : 'Failed to send verification code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyMagicCode = async () => {
+    if (!magicCode.trim() || magicCode.length !== 6) {
+      setError('Please enter the 6-digit code from your email');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/bff/auth/magic-auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          code: magicCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Invalid or expired code');
+      }
+
+      // Success! Redirect based on admin status or intended destination
+      const finalRedirect = data.data?.isAdmin && redirect === '/user' ? '/admin' : redirect;
+      window.location.href = finalRedirect;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
       setIsLoading(false);
     }
@@ -565,45 +600,78 @@ function LoginContent() {
                 className="w-full btn-secondary flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <MagicLinkIcon />
-                Email me a sign-in link
+                Email me a sign-in code
               </button>
             </div>
           )}
 
-          {/* Magic Link Sent Phase */}
-          {phase === 'magic-link-sent' && (
+          {/* Magic Code Entry Phase */}
+          {phase === 'magic-code-entry' && (
             <div className="animate-fadeIn">
+              <button
+                onClick={() => setPhase('email')}
+                className="inline-flex items-center gap-2 text-[var(--muted)] hover:text-white transition-colors mb-6 text-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-[var(--accent-muted)] border border-[var(--accent)]/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <MailIcon />
                 </div>
-                <h1 className="text-2xl font-bold mb-2">Check your email</h1>
+                <h1 className="text-2xl font-bold mb-2">Enter verification code</h1>
                 <p className="text-[var(--muted)] text-[15px]">
-                  We&apos;ve sent a sign-in link to<br />
+                  We&apos;ve sent a 6-digit code to<br />
                   <span className="text-white font-medium">{email}</span>
                 </p>
               </div>
 
-              <div className="bg-[var(--card-hover)] border border-[var(--border)] rounded-[10px] p-4 mb-6">
-                <p className="text-sm text-[var(--muted)]">
-                  Click the link in your email to sign in. The link will expire in 10 minutes.
-                </p>
+              {error && (
+                <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-[10px] p-3 mb-5">
+                  <p className="text-sm text-[var(--danger)]">{error}</p>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={magicCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setMagicCode(value);
+                    setError(null);
+                  }}
+                  placeholder="000000"
+                  className="w-full input-primary text-center text-2xl tracking-[0.5em] font-mono"
+                  autoFocus
+                />
               </div>
 
               <button
-                onClick={() => setPhase('email')}
-                className="w-full btn-secondary"
+                onClick={handleVerifyMagicCode}
+                disabled={isLoading || magicCode.length !== 6}
+                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Use a different email
+                {isLoading ? 'Verifying...' : 'Verify code'}
               </button>
 
-              <button
-                onClick={handleMagicLink}
-                disabled={isLoading}
-                className="w-full text-[var(--muted)] text-sm mt-4 hover:text-[var(--accent)] transition-colors disabled:opacity-50"
-              >
-                {isLoading ? 'Sending...' : 'Resend email'}
-              </button>
+              <div className="text-center mt-4">
+                <button
+                  onClick={handleMagicLink}
+                  disabled={isLoading}
+                  className="text-[var(--muted)] text-sm hover:text-[var(--accent)] transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? 'Sending...' : 'Resend code'}
+                </button>
+              </div>
+
+              <p className="text-xs text-[var(--muted)] text-center mt-4">
+                The code will expire in 10 minutes.
+              </p>
             </div>
           )}
 
