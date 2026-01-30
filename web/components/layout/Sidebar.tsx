@@ -11,10 +11,8 @@ import {
   HelpCircle,
   ExternalLink,
   Shield,
-  Server,
   Bot,
   KeyRound,
-  MessageSquare,
   TrendingUp,
 } from 'lucide-react';
 
@@ -44,8 +42,7 @@ export function Sidebar({ isAdmin = false, userName = 'User', orgName = 'Organiz
     { href: '/admin/users', label: 'Users', icon: <Users className="w-5 h-5" /> },
     { href: '/admin/sso', label: 'SSO / Enterprise', icon: <KeyRound className="w-5 h-5" /> },
     { href: '/admin/maia-models', label: 'Maia Management', icon: <Bot className="w-5 h-5" /> },
-    { href: '/admin/maia-hosts', label: 'Maia Hosts', icon: <Server className="w-5 h-5" /> },
-    { href: '/admin/sessions', label: 'Chat Sessions', icon: <MessageSquare className="w-5 h-5" /> },
+    { href: '/admin/sessions', label: 'Maia Usage', icon: <TrendingUp className="w-5 h-5" /> },
   ];
 
   return (

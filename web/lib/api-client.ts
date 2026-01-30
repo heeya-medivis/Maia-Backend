@@ -234,6 +234,83 @@ export interface UpdateUserData {
 }
 
 // =============================================================================
+// Admin Usage Types
+// =============================================================================
+
+export interface OverallUsageStats {
+  totalUsers: number;
+  totalOrganizations: number;
+  totalChatSessions: number;
+  totalDeepAnalyses: number;
+  totalChatInputTokens: number;
+  totalChatOutputTokens: number;
+  totalDeepAnalysisInputTokens: number;
+  totalDeepAnalysisOutputTokens: number;
+  totalTokens: number;
+  activeChatSessions: number;
+}
+
+export interface UserUsageStats {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  organization: string | null;
+  chatSessionCount: number;
+  chatInputTokens: number;
+  chatOutputTokens: number;
+  deepAnalysisCount: number;
+  deepAnalysisInputTokens: number;
+  deepAnalysisOutputTokens: number;
+  totalTokens: number;
+}
+
+export interface OrganizationUsageStats {
+  organization: string;
+  userCount: number;
+  chatSessionCount: number;
+  chatInputTokens: number;
+  chatOutputTokens: number;
+  deepAnalysisCount: number;
+  deepAnalysisInputTokens: number;
+  deepAnalysisOutputTokens: number;
+  totalTokens: number;
+}
+
+export interface DateRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface UserDetailInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  organization: string | null;
+}
+
+export interface UserDetailData {
+  user: UserDetailInfo;
+  chatSessions: MaiaChatSession[];
+  deepAnalyses: MaiaDeepAnalysis[];
+}
+
+export interface OrgUserInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface OrganizationDetailData {
+  organization: string;
+  users: OrgUserInfo[];
+  chatSessions: MaiaChatSession[];
+  deepAnalyses: MaiaDeepAnalysis[];
+}
+
+// =============================================================================
 // BFF Response Format
 // =============================================================================
 
@@ -423,6 +500,50 @@ class ApiClient {
     await this.request(`/admin/maia/prompts/${promptId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ===========================================================================
+  // Admin Usage Endpoints
+  // ===========================================================================
+
+  async getAdminUsageStats(params?: DateRangeParams): Promise<OverallUsageStats> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/stats${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<OverallUsageStats>(path);
+    return response.data!;
+  }
+
+  async getAdminUsageByUser(params?: DateRangeParams): Promise<UserUsageStats[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/by-user${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<UserUsageStats[]>(path);
+    return response.data ?? [];
+  }
+
+  async getAdminUsageByOrganization(params?: DateRangeParams): Promise<OrganizationUsageStats[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.set('startDate', params.startDate);
+    if (params?.endDate) queryParams.set('endDate', params.endDate);
+    const queryString = queryParams.toString();
+    const path = `/admin/usage/by-organization${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<OrganizationUsageStats[]>(path);
+    return response.data ?? [];
+  }
+
+  async getAdminUserDetail(userId: string): Promise<UserDetailData> {
+    const response = await this.request<UserDetailData>(`/admin/usage/user/${userId}`);
+    return response.data!;
+  }
+
+  async getAdminOrganizationDetail(organizationName: string): Promise<OrganizationDetailData> {
+    const response = await this.request<OrganizationDetailData>(`/admin/usage/organization/${encodeURIComponent(organizationName)}`);
+    return response.data!;
   }
 
   // ===========================================================================
