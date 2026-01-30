@@ -20,11 +20,12 @@ import { AuthController } from './controllers/auth.controller';
 import { DevicesController } from './controllers/devices.controller';
 import { OAuthController } from './controllers/oauth.controller';
 import { SsoController } from './controllers/sso.controller';
+import { MagicAuthController } from './controllers/magic-auth.controller';
 
 @Global()
 @Module({
   imports: [DatabaseModule, ConfigModule, UsersModule],
-  controllers: [AuthController, DevicesController, OAuthController, SsoController],
+  controllers: [AuthController, DevicesController, OAuthController, SsoController, MagicAuthController],
   providers: [
     // Guards
     JwtAuthGuard,

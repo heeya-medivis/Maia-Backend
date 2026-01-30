@@ -191,6 +191,7 @@ export interface OAuthState {
   connectionId?: string;
   deviceId?: string;
   devicePlatform?: string;
+  email?: string;
   nonce: string;
 }
 
