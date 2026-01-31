@@ -143,8 +143,8 @@ export interface AvailableUser {
   email: string;
 }
 
-// Chat session types
-export interface MaiaChatSession {
+// Session types
+export interface MaiaSession {
   id: string;
   userId: string;
   providerSessionId: string;
@@ -154,12 +154,17 @@ export interface MaiaChatSession {
   totalInputTextTokens: number;
   totalInputImageTokens: number;
   totalInputAudioTokens: number;
+  totalInputTextCachedTokens: number;
+  totalInputImageCachedTokens: number;
+  totalInputAudioCachedTokens: number;
   totalOutputTextTokens: number;
+  totalOutputImageTokens: number;
   totalOutputAudioTokens: number;
+  totalOutputReasoningTokens: number;
   createdAt: string;
 }
 
-export interface MaiaChatTurn {
+export interface MaiaSessionTurn {
   id: string;
   sessionId: string;
   requestTime: string;
@@ -167,24 +172,19 @@ export interface MaiaChatTurn {
   inputTextTokens: number;
   inputImageTokens: number;
   inputAudioTokens: number;
+  inputTextCachedTokens: number;
+  inputImageCachedTokens: number;
+  inputAudioCachedTokens: number;
   outputTextTokens: number;
+  outputImageTokens: number;
   outputAudioTokens: number;
+  outputReasoningTokens: number;
   createdAt: string;
 }
 
-export interface MaiaChatSessionWithTurns {
-  session: MaiaChatSession;
-  turns: MaiaChatTurn[];
-}
-
-// Deep analysis types
-export interface MaiaDeepAnalysis {
-  id: string;
-  userId: string;
-  requestTime: string;
-  inputTokens: number;
-  outputTokens: number;
-  createdAt: string;
+export interface MaiaSessionWithTurns {
+  session: MaiaSession;
+  turns: MaiaSessionTurn[];
 }
 
 // Legacy type for backwards compatibility
@@ -248,11 +248,8 @@ export interface OverallUsageStats {
   totalUsers: number;
   totalOrganizations: number;
   totalChatSessions: number;
-  totalDeepAnalyses: number;
   totalChatInputTokens: number;
   totalChatOutputTokens: number;
-  totalDeepAnalysisInputTokens: number;
-  totalDeepAnalysisOutputTokens: number;
   totalTokens: number;
   activeChatSessions: number;
 }
@@ -266,9 +263,6 @@ export interface UserUsageStats {
   chatSessionCount: number;
   chatInputTokens: number;
   chatOutputTokens: number;
-  deepAnalysisCount: number;
-  deepAnalysisInputTokens: number;
-  deepAnalysisOutputTokens: number;
   totalTokens: number;
 }
 
@@ -278,9 +272,6 @@ export interface OrganizationUsageStats {
   chatSessionCount: number;
   chatInputTokens: number;
   chatOutputTokens: number;
-  deepAnalysisCount: number;
-  deepAnalysisInputTokens: number;
-  deepAnalysisOutputTokens: number;
   totalTokens: number;
 }
 
@@ -299,8 +290,7 @@ export interface UserDetailInfo {
 
 export interface UserDetailData {
   user: UserDetailInfo;
-  chatSessions: MaiaChatSession[];
-  deepAnalyses: MaiaDeepAnalysis[];
+  chatSessions: MaiaSession[];
 }
 
 export interface OrgUserInfo {
@@ -313,8 +303,7 @@ export interface OrgUserInfo {
 export interface OrganizationDetailData {
   organization: string;
   users: OrgUserInfo[];
-  chatSessions: MaiaChatSession[];
-  deepAnalyses: MaiaDeepAnalysis[];
+  chatSessions: MaiaSession[];
 }
 
 // =============================================================================
@@ -563,30 +552,16 @@ class ApiClient {
   }
 
   // ===========================================================================
-  // MAIA Chat Session Endpoints
+  // MAIA Session Endpoints
   // ===========================================================================
 
-  async getChatSessions(): Promise<MaiaChatSession[]> {
-    const response = await this.request<MaiaChatSession[]>('/maia-chat');
+  async getSessions(): Promise<MaiaSession[]> {
+    const response = await this.request<MaiaSession[]>('/maia/session');
     return response.data ?? [];
   }
 
-  async getChatSession(sessionId: string): Promise<MaiaChatSessionWithTurns> {
-    const response = await this.request<MaiaChatSessionWithTurns>(`/maia-chat/${sessionId}`);
-    return response.data!;
-  }
-
-  // ===========================================================================
-  // MAIA Deep Analysis Endpoints
-  // ===========================================================================
-
-  async getDeepAnalyses(): Promise<MaiaDeepAnalysis[]> {
-    const response = await this.request<MaiaDeepAnalysis[]>('/maia-deep-analysis');
-    return response.data ?? [];
-  }
-
-  async getDeepAnalysis(analysisId: string): Promise<MaiaDeepAnalysis> {
-    const response = await this.request<MaiaDeepAnalysis>(`/maia-deep-analysis/${analysisId}`);
+  async getSession(sessionId: string): Promise<MaiaSessionWithTurns> {
+    const response = await this.request<MaiaSessionWithTurns>(`/maia/session/${sessionId}`);
     return response.data!;
   }
 }

@@ -14,7 +14,6 @@ import {
   Users,
   Building2,
   MessageSquare,
-  Brain,
   Zap,
   RefreshCw,
   Loader2,
@@ -69,7 +68,6 @@ interface UserRowProps {
 function UserRow({ user, rank, onViewDetail }: UserRowProps) {
   const [expanded, setExpanded] = useState(false);
   const totalChatTokens = user.chatInputTokens + user.chatOutputTokens;
-  const totalAnalysisTokens = user.deepAnalysisInputTokens + user.deepAnalysisOutputTokens;
 
   return (
     <>
@@ -89,7 +87,6 @@ function UserRow({ user, rank, onViewDetail }: UserRowProps) {
         </td>
         <td className="p-4 text-sm">{user.organization || <span className="text-[var(--muted)]">-</span>}</td>
         <td className="p-4 text-sm text-center">{user.chatSessionCount}</td>
-        <td className="p-4 text-sm text-center">{user.deepAnalysisCount}</td>
         <td className="p-4 text-sm font-mono text-right">{formatNumber(user.totalTokens)}</td>
         <td className="p-4 text-center">
           <button
@@ -103,8 +100,8 @@ function UserRow({ user, rank, onViewDetail }: UserRowProps) {
       </tr>
       {expanded && (
         <tr className="bg-[var(--card-hover)]">
-          <td colSpan={7} className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <td colSpan={6} className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-[var(--card)] rounded-lg">
                 <p className="text-[var(--muted)] text-xs mb-1">Chat Input Tokens</p>
                 <p className="font-mono">{formatNumber(user.chatInputTokens)}</p>
@@ -113,19 +110,10 @@ function UserRow({ user, rank, onViewDetail }: UserRowProps) {
                 <p className="text-[var(--muted)] text-xs mb-1">Chat Output Tokens</p>
                 <p className="font-mono">{formatNumber(user.chatOutputTokens)}</p>
               </div>
-              <div className="p-3 bg-[var(--card)] rounded-lg">
-                <p className="text-[var(--muted)] text-xs mb-1">Analysis Input Tokens</p>
-                <p className="font-mono">{formatNumber(user.deepAnalysisInputTokens)}</p>
-              </div>
-              <div className="p-3 bg-[var(--card)] rounded-lg">
-                <p className="text-[var(--muted)] text-xs mb-1">Analysis Output Tokens</p>
-                <p className="font-mono">{formatNumber(user.deepAnalysisOutputTokens)}</p>
-              </div>
             </div>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex gap-4 text-xs text-[var(--muted)]">
                 <span>Total Chat: <span className="font-mono text-white">{formatNumber(totalChatTokens)}</span></span>
-                <span>Total Analysis: <span className="font-mono text-white">{formatNumber(totalAnalysisTokens)}</span></span>
               </div>
               <Button
                 onClick={() => onViewDetail(user.userId)}
@@ -152,7 +140,6 @@ interface OrgRowProps {
 function OrgRow({ org, rank, onViewDetail }: OrgRowProps) {
   const [expanded, setExpanded] = useState(false);
   const totalChatTokens = org.chatInputTokens + org.chatOutputTokens;
-  const totalAnalysisTokens = org.deepAnalysisInputTokens + org.deepAnalysisOutputTokens;
 
   return (
     <>
@@ -169,7 +156,6 @@ function OrgRow({ org, rank, onViewDetail }: OrgRowProps) {
         </td>
         <td className="p-4 text-sm text-center">{org.userCount}</td>
         <td className="p-4 text-sm text-center">{org.chatSessionCount}</td>
-        <td className="p-4 text-sm text-center">{org.deepAnalysisCount}</td>
         <td className="p-4 text-sm font-mono text-right">{formatNumber(org.totalTokens)}</td>
         <td className="p-4 text-center">
           <button
@@ -183,8 +169,8 @@ function OrgRow({ org, rank, onViewDetail }: OrgRowProps) {
       </tr>
       {expanded && (
         <tr className="bg-[var(--card-hover)]">
-          <td colSpan={7} className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <td colSpan={6} className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-[var(--card)] rounded-lg">
                 <p className="text-[var(--muted)] text-xs mb-1">Chat Input Tokens</p>
                 <p className="font-mono">{formatNumber(org.chatInputTokens)}</p>
@@ -193,19 +179,10 @@ function OrgRow({ org, rank, onViewDetail }: OrgRowProps) {
                 <p className="text-[var(--muted)] text-xs mb-1">Chat Output Tokens</p>
                 <p className="font-mono">{formatNumber(org.chatOutputTokens)}</p>
               </div>
-              <div className="p-3 bg-[var(--card)] rounded-lg">
-                <p className="text-[var(--muted)] text-xs mb-1">Analysis Input Tokens</p>
-                <p className="font-mono">{formatNumber(org.deepAnalysisInputTokens)}</p>
-              </div>
-              <div className="p-3 bg-[var(--card)] rounded-lg">
-                <p className="text-[var(--muted)] text-xs mb-1">Analysis Output Tokens</p>
-                <p className="font-mono">{formatNumber(org.deepAnalysisOutputTokens)}</p>
-              </div>
             </div>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex gap-4 text-xs text-[var(--muted)]">
                 <span>Total Chat: <span className="font-mono text-white">{formatNumber(totalChatTokens)}</span></span>
-                <span>Total Analysis: <span className="font-mono text-white">{formatNumber(totalAnalysisTokens)}</span></span>
                 <span>Avg per User: <span className="font-mono text-white">{formatNumber(Math.round(org.totalTokens / org.userCount))}</span></span>
               </div>
               <Button
@@ -289,15 +266,15 @@ export function SessionsContent() {
 
       {/* Stats Cards */}
       {statsLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
             <Card key={i} className="p-4 animate-pulse">
               <div className="h-16 bg-[var(--card-hover)] rounded" />
             </Card>
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
@@ -336,18 +313,6 @@ export function SessionsContent() {
               </div>
             </div>
           </Card>
-
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-pink-500/10 rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-pink-400" />
-              </div>
-              <div>
-                <p className="text-sm text-[var(--muted)]">Deep Analyses</p>
-                <p className="text-xl font-bold">{stats.totalDeepAnalyses}</p>
-              </div>
-            </div>
-          </Card>
         </div>
       ) : null}
 
@@ -358,7 +323,7 @@ export function SessionsContent() {
             <Zap className="w-5 h-5 text-[var(--accent)]" />
             <h3 className="font-medium">Token Usage Summary</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-3 bg-[var(--card-hover)] rounded-lg">
               <p className="text-xs text-[var(--muted)] mb-1">Chat Input</p>
               <p className="text-lg font-bold font-mono">{formatNumber(stats.totalChatInputTokens)}</p>
@@ -366,14 +331,6 @@ export function SessionsContent() {
             <div className="p-3 bg-[var(--card-hover)] rounded-lg">
               <p className="text-xs text-[var(--muted)] mb-1">Chat Output</p>
               <p className="text-lg font-bold font-mono">{formatNumber(stats.totalChatOutputTokens)}</p>
-            </div>
-            <div className="p-3 bg-[var(--card-hover)] rounded-lg">
-              <p className="text-xs text-[var(--muted)] mb-1">Analysis Input</p>
-              <p className="text-lg font-bold font-mono">{formatNumber(stats.totalDeepAnalysisInputTokens)}</p>
-            </div>
-            <div className="p-3 bg-[var(--card-hover)] rounded-lg">
-              <p className="text-xs text-[var(--muted)] mb-1">Analysis Output</p>
-              <p className="text-lg font-bold font-mono">{formatNumber(stats.totalDeepAnalysisOutputTokens)}</p>
             </div>
             <div className="p-3 bg-[var(--accent-muted)] rounded-lg border border-[var(--accent)]">
               <p className="text-xs text-[var(--muted)] mb-1">Total Tokens</p>
@@ -465,7 +422,6 @@ export function SessionsContent() {
                     <th className="p-4">User</th>
                     <th className="p-4">Organization</th>
                     <th className="p-4 text-center">Chat Sessions</th>
-                    <th className="p-4 text-center">Analyses</th>
                     <th className="p-4 text-right">Total Tokens</th>
                     <th className="p-4 w-16 text-center"></th>
                   </tr>
@@ -493,7 +449,7 @@ export function SessionsContent() {
                   <th className="p-4">Organization</th>
                   <th className="p-4 text-center">Users</th>
                   <th className="p-4 text-center">Chat Sessions</th>
-                  <th className="p-4 text-center">Analyses</th>
+
                   <th className="p-4 text-right">Total Tokens</th>
                   <th className="p-4 w-16 text-center"></th>
                 </tr>

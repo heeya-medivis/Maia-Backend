@@ -3,29 +3,26 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Badge, Button } from '@/components/ui';
-import { api, useApi, MaiaChatSession, MaiaDeepAnalysis } from '@/lib/api-client';
+import { api, useApi, MaiaSession } from '@/lib/api-client';
 import { UsageChart } from '@/components/charts/UsageChart';
 import {
   ArrowLeft,
   User,
   Building2,
   MessageSquare,
-  Brain,
   Zap,
   RefreshCw,
   Loader2,
   Calendar,
   Clock,
   BarChart3,
-  Layers,
   Mail,
 } from 'lucide-react';
 
 type TimeRange = 'today' | '7days';
 type Metric = 'sessions' | 'tokens';
-type ViewType = 'combined' | 'chat' | 'analysis';
 
-function getChatTotalTokens(session: MaiaChatSession): number {
+function getChatTotalTokens(session: MaiaSession): number {
   return (
     session.totalInputTextTokens +
     session.totalInputImageTokens +
@@ -33,10 +30,6 @@ function getChatTotalTokens(session: MaiaChatSession): number {
     session.totalOutputTextTokens +
     session.totalOutputAudioTokens
   );
-}
-
-function getAnalysisTotalTokens(analysis: MaiaDeepAnalysis): number {
-  return analysis.inputTokens + analysis.outputTokens;
 }
 
 interface UserDetailContentProps {
@@ -47,7 +40,6 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
   const router = useRouter();
   const [timeRange, setTimeRange] = useState<TimeRange>('7days');
   const [metric, setMetric] = useState<Metric>('tokens');
-  const [viewType, setViewType] = useState<ViewType>('combined');
 
   const { data, isLoading, error, refetch } = useApi(
     () => api.getAdminUserDetail(userId),
@@ -69,71 +61,42 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
     return data.chatSessions.filter((s) => new Date(s.startTime) >= cutoff);
   }, [data?.chatSessions, timeRange]);
 
-  // Filter deep analyses based on time range
-  const filteredDeepAnalyses = useMemo(() => {
-    if (!data?.deepAnalyses) return [];
-    const cutoff = new Date();
-
-    if (timeRange === 'today') {
-      cutoff.setHours(0, 0, 0, 0);
-    } else {
-      cutoff.setDate(cutoff.getDate() - 7);
-      cutoff.setHours(0, 0, 0, 0);
-    }
-
-    return data.deepAnalyses.filter((a) => new Date(a.requestTime) >= cutoff);
-  }, [data?.deepAnalyses, timeRange]);
-
   // Calculate stats
   const stats = useMemo(() => {
     const chatCount = filteredChatSessions.length;
-    const analysisCount = filteredDeepAnalyses.length;
     const activeSessions = filteredChatSessions.filter((s) => s.isActive).length;
 
-    let inputTokens = 0;
-    let outputTokens = 0;
-
-    if (viewType === 'combined' || viewType === 'chat') {
-      inputTokens += filteredChatSessions.reduce(
-        (sum, s) =>
-          sum +
-          s.totalInputTextTokens +
-          s.totalInputImageTokens +
-          s.totalInputAudioTokens,
-        0
-      );
-      outputTokens += filteredChatSessions.reduce(
-        (sum, s) => sum + s.totalOutputTextTokens + s.totalOutputAudioTokens,
-        0
-      );
-    }
-
-    if (viewType === 'combined' || viewType === 'analysis') {
-      inputTokens += filteredDeepAnalyses.reduce((sum, a) => sum + a.inputTokens, 0);
-      outputTokens += filteredDeepAnalyses.reduce((sum, a) => sum + a.outputTokens, 0);
-    }
+    const inputTokens = filteredChatSessions.reduce(
+      (sum, s) =>
+        sum +
+        s.totalInputTextTokens +
+        s.totalInputImageTokens +
+        s.totalInputAudioTokens,
+      0
+    );
+    const outputTokens = filteredChatSessions.reduce(
+      (sum, s) => sum + s.totalOutputTextTokens + s.totalOutputAudioTokens,
+      0
+    );
 
     return {
       chatCount,
-      analysisCount,
       activeSessions,
       totalTokens: inputTokens + outputTokens,
       inputTokens,
       outputTokens,
     };
-  }, [filteredChatSessions, filteredDeepAnalyses, viewType]);
+  }, [filteredChatSessions]);
 
   // All-time stats
   const allTimeStats = useMemo(() => {
-    if (!data) return { chatCount: 0, analysisCount: 0, totalTokens: 0 };
+    if (!data) return { chatCount: 0, totalTokens: 0 };
 
     const chatTokens = data.chatSessions.reduce((sum, s) => sum + getChatTotalTokens(s), 0);
-    const analysisTokens = data.deepAnalyses.reduce((sum, a) => sum + getAnalysisTotalTokens(a), 0);
 
     return {
       chatCount: data.chatSessions.length,
-      analysisCount: data.deepAnalyses.length,
-      totalTokens: chatTokens + analysisTokens,
+      totalTokens: chatTokens,
     };
   }, [data]);
 
@@ -193,7 +156,7 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
       </div>
 
       {/* All-time Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
@@ -202,18 +165,6 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
             <div>
               <p className="text-sm text-[var(--muted)]">Total Chat Sessions</p>
               <p className="text-xl font-bold">{allTimeStats.chatCount}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-500/10 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5 text-pink-400" />
-            </div>
-            <div>
-              <p className="text-sm text-[var(--muted)]">Total Analyses</p>
-              <p className="text-xl font-bold">{allTimeStats.analysisCount}</p>
             </div>
           </div>
         </Card>
@@ -241,57 +192,6 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
             </div>
           </div>
         </Card>
-      </div>
-
-      {/* View Type Selector */}
-      <div className="flex flex-wrap gap-3">
-        <button
-          onClick={() => setViewType('combined')}
-          className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 text-left ${
-            viewType === 'combined'
-              ? 'border-purple-500 bg-purple-500/10'
-              : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent)]/50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Layers className={`w-4 h-4 ${viewType === 'combined' ? 'text-purple-400' : 'text-[var(--muted)]'}`} />
-            <span className={`font-medium text-sm ${viewType === 'combined' ? 'text-white' : ''}`}>
-              Combined View
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setViewType('chat')}
-          className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 text-left ${
-            viewType === 'chat'
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent)]/50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <MessageSquare className={`w-4 h-4 ${viewType === 'chat' ? 'text-blue-400' : 'text-[var(--muted)]'}`} />
-            <span className={`font-medium text-sm ${viewType === 'chat' ? 'text-white' : ''}`}>
-              Chat Sessions
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => setViewType('analysis')}
-          className={`px-4 py-3 rounded-xl border-2 transition-all duration-300 text-left ${
-            viewType === 'analysis'
-              ? 'border-pink-500 bg-pink-500/10'
-              : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--accent)]/50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Brain className={`w-4 h-4 ${viewType === 'analysis' ? 'text-pink-400' : 'text-[var(--muted)]'}`} />
-            <span className={`font-medium text-sm ${viewType === 'analysis' ? 'text-white' : ''}`}>
-              Deep Analysis
-            </span>
-          </div>
-        </button>
       </div>
 
       {/* Toggle Controls */}
@@ -376,10 +276,8 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
 
         <UsageChart
           chatSessions={filteredChatSessions}
-          deepAnalyses={filteredDeepAnalyses}
           timeRange={timeRange}
           metric={metric}
-          viewType={viewType}
           height={320}
         />
       </Card>
@@ -389,14 +287,10 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
         <h3 className="font-medium mb-4">
           {timeRange === 'today' ? "Today's" : 'Last 7 Days'} Summary
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="p-3 bg-[var(--card-hover)] rounded-lg">
             <p className="text-xs text-[var(--muted)] mb-1">Chat Sessions</p>
             <p className="text-lg font-bold">{stats.chatCount}</p>
-          </div>
-          <div className="p-3 bg-[var(--card-hover)] rounded-lg">
-            <p className="text-xs text-[var(--muted)] mb-1">Analyses</p>
-            <p className="text-lg font-bold">{stats.analysisCount}</p>
           </div>
           <div className="p-3 bg-[var(--card-hover)] rounded-lg">
             <p className="text-xs text-[var(--muted)] mb-1">Input Tokens</p>
@@ -412,96 +306,45 @@ export function UserDetailContent({ userId }: UserDetailContentProps) {
       {/* Recent Activity */}
       <Card className="p-6">
         <h2 className="font-medium mb-4">Recent Activity</h2>
-        {(() => {
-          type RecentItem =
-            | { type: 'chat'; data: MaiaChatSession; time: Date }
-            | { type: 'analysis'; data: MaiaDeepAnalysis; time: Date };
-
-          const recentItems: RecentItem[] = [];
-
-          if (viewType === 'combined' || viewType === 'chat') {
-            filteredChatSessions.forEach(session => {
-              recentItems.push({ type: 'chat', data: session, time: new Date(session.startTime) });
-            });
-          }
-
-          if (viewType === 'combined' || viewType === 'analysis') {
-            filteredDeepAnalyses.forEach(analysis => {
-              recentItems.push({ type: 'analysis', data: analysis, time: new Date(analysis.requestTime) });
-            });
-          }
-
-          recentItems.sort((a, b) => b.time.getTime() - a.time.getTime());
-
-          if (recentItems.length === 0) {
-            return (
-              <div className="text-center py-8 text-[var(--muted)]">
-                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No activity in this time period</p>
-              </div>
-            );
-          }
-
-          return (
-            <div className="space-y-3">
-              {recentItems.slice(0, 10).map((item) => {
-                if (item.type === 'chat') {
-                  const session = item.data;
-                  return (
+        {filteredChatSessions.length === 0 ? (
+          <div className="text-center py-8 text-[var(--muted)]">
+            <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No activity in this time period</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredChatSessions
+              .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+              .slice(0, 10)
+              .map((session) => (
+                <div
+                  key={session.id}
+                  className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
                     <div
-                      key={`chat-${session.id}`}
-                      className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            session.isActive ? 'bg-green-500' : 'bg-blue-500'
-                          }`}
-                        />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {item.time.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-[var(--muted)]">
-                            {session.isActive ? 'Active Chat' : 'Chat Session'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-mono">
-                          {getChatTotalTokens(session).toLocaleString()} tokens
-                        </p>
-                      </div>
+                      className={`w-2 h-2 rounded-full ${
+                        session.isActive ? 'bg-green-500' : 'bg-blue-500'
+                      }`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {new Date(session.startTime).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {session.isActive ? 'Active Chat' : 'Chat Session'}
+                      </p>
                     </div>
-                  );
-                } else {
-                  const analysis = item.data;
-                  return (
-                    <div
-                      key={`analysis-${analysis.id}`}
-                      className="flex items-center justify-between p-3 bg-[var(--card-hover)] rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-pink-500" />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {item.time.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-[var(--muted)]">Deep Analysis</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-mono">
-                          {getAnalysisTotalTokens(analysis).toLocaleString()} tokens
-                        </p>
-                      </div>
-                    </div>
-                  );
-                }
-              })}
-            </div>
-          );
-        })()}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">
+                      {getChatTotalTokens(session).toLocaleString()} tokens
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -30,19 +30,10 @@ export class OverallStatsResponseDto {
   totalChatSessions: number;
 
   @ApiProperty()
-  totalDeepAnalyses: number;
-
-  @ApiProperty()
   totalChatInputTokens: number;
 
   @ApiProperty()
   totalChatOutputTokens: number;
-
-  @ApiProperty()
-  totalDeepAnalysisInputTokens: number;
-
-  @ApiProperty()
-  totalDeepAnalysisOutputTokens: number;
 
   @ApiProperty()
   totalTokens: number;
@@ -80,15 +71,6 @@ export class UserUsageStatsDto {
   chatOutputTokens: number;
 
   @ApiProperty()
-  deepAnalysisCount: number;
-
-  @ApiProperty()
-  deepAnalysisInputTokens: number;
-
-  @ApiProperty()
-  deepAnalysisOutputTokens: number;
-
-  @ApiProperty()
   totalTokens: number;
 }
 
@@ -110,15 +92,6 @@ export class OrganizationUsageStatsDto {
 
   @ApiProperty()
   chatOutputTokens: number;
-
-  @ApiProperty()
-  deepAnalysisCount: number;
-
-  @ApiProperty()
-  deepAnalysisInputTokens: number;
-
-  @ApiProperty()
-  deepAnalysisOutputTokens: number;
 
   @ApiProperty()
   totalTokens: number;
@@ -156,39 +129,31 @@ export class ChatSessionDto {
   totalInputAudioTokens: number;
 
   @ApiProperty()
+  totalInputTextCachedTokens: number;
+
+  @ApiProperty()
+  totalInputImageCachedTokens: number;
+
+  @ApiProperty()
+  totalInputAudioCachedTokens: number;
+
+  @ApiProperty()
   totalOutputTextTokens: number;
 
   @ApiProperty()
+  totalOutputImageTokens: number;
+
+  @ApiProperty()
   totalOutputAudioTokens: number;
+
+  @ApiProperty()
+  totalOutputReasoningTokens: number;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiPropertyOptional()
   updatedAt: Date | null;
-}
-
-/**
- * Deep analysis data
- */
-export class DeepAnalysisDto {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  userId: string;
-
-  @ApiProperty()
-  requestTime: Date;
-
-  @ApiProperty()
-  inputTokens: number;
-
-  @ApiProperty()
-  outputTokens: number;
-
-  @ApiProperty()
-  createdAt: Date;
 }
 
 /**
@@ -212,7 +177,7 @@ export class UserInfoDto {
 }
 
 /**
- * User detail response with sessions and analyses
+ * User detail response with sessions
  */
 export class UserDetailResponseDto {
   @ApiProperty({ type: UserInfoDto })
@@ -220,9 +185,6 @@ export class UserDetailResponseDto {
 
   @ApiProperty({ type: [ChatSessionDto] })
   chatSessions: ChatSessionDto[];
-
-  @ApiProperty({ type: [DeepAnalysisDto] })
-  deepAnalyses: DeepAnalysisDto[];
 }
 
 /**
@@ -243,7 +205,7 @@ export class OrgUserInfoDto {
 }
 
 /**
- * Organization detail response with users, sessions and analyses
+ * Organization detail response with users and sessions
  */
 export class OrganizationDetailResponseDto {
   @ApiProperty()
@@ -254,7 +216,4 @@ export class OrganizationDetailResponseDto {
 
   @ApiProperty({ type: [ChatSessionDto] })
   chatSessions: ChatSessionDto[];
-
-  @ApiProperty({ type: [DeepAnalysisDto] })
-  deepAnalyses: DeepAnalysisDto[];
 }

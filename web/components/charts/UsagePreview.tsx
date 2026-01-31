@@ -3,29 +3,24 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
-import { api, useApi, MaiaChatSession, MaiaDeepAnalysis } from '@/lib/api-client';
+import { api, useApi, MaiaSession } from '@/lib/api-client';
 import { UsageChart } from './UsageChart';
 import { TrendingUp, Zap, MessageSquare, ArrowRight, Loader2 } from 'lucide-react';
 
-function getChatTotalTokens(session: MaiaChatSession): number {
+function getChatTotalTokens(session: MaiaSession): number {
   return (
     session.totalInputTextTokens +
     session.totalInputImageTokens +
     session.totalInputAudioTokens +
     session.totalOutputTextTokens +
-    session.totalOutputAudioTokens
+    session.totalOutputImageTokens +
+    session.totalOutputAudioTokens +
+    session.totalOutputReasoningTokens
   );
 }
 
-function getAnalysisTotalTokens(analysis: MaiaDeepAnalysis): number {
-  return analysis.inputTokens + analysis.outputTokens;
-}
-
 export function UsagePreview() {
-  const { data: chatSessions, isLoading: isLoadingChat } = useApi(() => api.getChatSessions(), []);
-  const { data: deepAnalyses, isLoading: isLoadingAnalyses } = useApi(() => api.getDeepAnalyses(), []);
-
-  const isLoading = isLoadingChat || isLoadingAnalyses;
+  const { data: chatSessions, isLoading } = useApi(() => api.getSessions(), []);
 
   // Filter to today's chat sessions
   const todayChatSessions = useMemo(() => {
@@ -35,22 +30,12 @@ export function UsagePreview() {
     return chatSessions.filter((s) => new Date(s.startTime) >= startOfDay);
   }, [chatSessions]);
 
-  // Filter to today's deep analyses
-  const todayDeepAnalyses = useMemo(() => {
-    if (!deepAnalyses) return [];
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    return deepAnalyses.filter((a) => new Date(a.requestTime) >= startOfDay);
-  }, [deepAnalyses]);
-
   // Calculate stats
   const stats = useMemo(() => {
-    const totalSessions = todayChatSessions.length + todayDeepAnalyses.length;
-    const chatTokens = todayChatSessions.reduce((sum, s) => sum + getChatTotalTokens(s), 0);
-    const analysisTokens = todayDeepAnalyses.reduce((sum, a) => sum + getAnalysisTotalTokens(a), 0);
-    const totalTokens = chatTokens + analysisTokens;
+    const totalSessions = todayChatSessions.length;
+    const totalTokens = todayChatSessions.reduce((sum, s) => sum + getChatTotalTokens(s), 0);
     return { totalSessions, totalTokens };
-  }, [todayChatSessions, todayDeepAnalyses]);
+  }, [todayChatSessions]);
 
   return (
     <Card className="p-6">
@@ -69,7 +54,7 @@ export function UsagePreview() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-[180px]">
+        <div className="flex items-center justify-center h-[260px]">
           <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
         </div>
       ) : (
@@ -93,14 +78,12 @@ export function UsagePreview() {
           </div>
 
           {/* Mini Chart */}
-          <div className="h-[120px]">
+          <div className="h-[200px]">
             <UsageChart
               chatSessions={todayChatSessions}
-              deepAnalyses={todayDeepAnalyses}
               timeRange="today"
               metric="tokens"
-              viewType="combined"
-              height={120}
+              height={200}
             />
           </div>
         </>
