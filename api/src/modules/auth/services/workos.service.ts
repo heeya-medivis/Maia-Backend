@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { WorkOS } from '@workos-inc/node';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { WorkOS } from "@workos-inc/node";
 
 import type {
   Connection,
@@ -8,17 +8,17 @@ import type {
   SerializedListConnectionsOptions,
   MagicAuth,
   AuthenticationResponse,
-} from '@workos-inc/node';
+} from "@workos-inc/node";
 
 export interface WorkOSSsoOptions {
   connectionId?: string;
   organizationId?: string;
-  provider?: 'GoogleOAuth' | 'MicrosoftOAuth' | 'AppleOAuth';
+  provider?: "GoogleOAuth" | "MicrosoftOAuth" | "AppleOAuth";
   loginHint?: string;
   state: string;
   redirectUri?: string;
   codeChallenge: string;
-  codeChallengeMethod: 'S256';
+  codeChallengeMethod: "S256";
 }
 
 export interface WorkOSProfile {
@@ -42,20 +42,37 @@ export class WorkOSService {
   private readonly appleConnectionId?: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.getOrThrow<string>('WORKOS_API_KEY');
+    const apiKey = this.configService.getOrThrow<string>("WORKOS_API_KEY");
     this.workos = new WorkOS(apiKey);
-    this.clientId = this.configService.getOrThrow<string>('WORKOS_CLIENT_ID');
-    this.redirectUri = this.configService.getOrThrow<string>('WORKOS_REDIRECT_URI');
-    this.googleConnectionId = this.configService.get<string>('WORKOS_GOOGLE_CONNECTION_ID');
-    this.microsoftConnectionId = this.configService.get<string>('WORKOS_MICROSOFT_CONNECTION_ID');
-    this.appleConnectionId = this.configService.get<string>('WORKOS_APPLE_CONNECTION_ID');
+    this.clientId = this.configService.getOrThrow<string>("WORKOS_CLIENT_ID");
+    this.redirectUri = this.configService.getOrThrow<string>(
+      "WORKOS_REDIRECT_URI",
+    );
+    this.googleConnectionId = this.configService.get<string>(
+      "WORKOS_GOOGLE_CONNECTION_ID",
+    );
+    this.microsoftConnectionId = this.configService.get<string>(
+      "WORKOS_MICROSOFT_CONNECTION_ID",
+    );
+    this.appleConnectionId = this.configService.get<string>(
+      "WORKOS_APPLE_CONNECTION_ID",
+    );
   }
 
   /**
    * Get SSO authorization URL for enterprise connections or social login
    */
   getAuthorizationUrl(options: WorkOSSsoOptions): string {
-    const { connectionId, organizationId, provider, loginHint, state, redirectUri, codeChallenge, codeChallengeMethod } = options;
+    const {
+      connectionId,
+      organizationId,
+      provider,
+      loginHint,
+      state,
+      redirectUri,
+      codeChallenge,
+      codeChallengeMethod,
+    } = options;
 
     const baseOptions = {
       clientId: this.clientId,
@@ -63,12 +80,12 @@ export class WorkOSService {
       state,
       codeChallenge,
       codeChallengeMethod,
-      ...(loginHint !== undefined && loginHint !== '' && { loginHint }),
+      ...(loginHint !== undefined && loginHint !== "" && { loginHint }),
     };
 
     // WorkOS SDK requires exactly one of: connection, organization, or provider
     // Priority: connectionId > provider > organizationId
-    if (connectionId !== undefined && connectionId !== '') {
+    if (connectionId !== undefined && connectionId !== "") {
       return this.workos.sso.getAuthorizationUrl({
         ...baseOptions,
         connection: connectionId,
@@ -82,7 +99,7 @@ export class WorkOSService {
       });
     }
 
-    if (organizationId !== undefined && organizationId !== '') {
+    if (organizationId !== undefined && organizationId !== "") {
       return this.workos.sso.getAuthorizationUrl({
         ...baseOptions,
         organization: organizationId,
@@ -92,14 +109,16 @@ export class WorkOSService {
     // Default to GoogleOAuth if no specific connection specified
     return this.workos.sso.getAuthorizationUrl({
       ...baseOptions,
-      provider: 'GoogleOAuth',
+      provider: "GoogleOAuth",
     });
   }
 
   /**
    * Exchange authorization code for user profile
    */
-  async getProfileAndToken(code: string): Promise<{ profile: WorkOSProfile; accessToken: string }> {
+  async getProfileAndToken(
+    code: string,
+  ): Promise<{ profile: WorkOSProfile; accessToken: string }> {
     const { profile, accessToken } = await this.workos.sso.getProfileAndToken({
       code,
       clientId: this.clientId,
@@ -131,7 +150,7 @@ export class WorkOSService {
    * List connections for an organization
    */
   async listConnections(
-    organizationId: string
+    organizationId: string,
   ): Promise<AutoPaginatable<Connection, SerializedListConnectionsOptions>> {
     return this.workos.sso.listConnections({
       organizationId,
@@ -142,13 +161,15 @@ export class WorkOSService {
    * Get WorkOS connection ID for a social provider
    * Returns the configured connection ID from env vars
    */
-  getSocialConnectionId(provider: 'google' | 'microsoft' | 'apple'): string | undefined {
+  getSocialConnectionId(
+    provider: "google" | "microsoft" | "apple",
+  ): string | undefined {
     switch (provider) {
-      case 'google':
+      case "google":
         return this.googleConnectionId;
-      case 'microsoft':
+      case "microsoft":
         return this.microsoftConnectionId;
-      case 'apple':
+      case "apple":
         return this.appleConnectionId;
       default:
         return undefined;
@@ -158,14 +179,16 @@ export class WorkOSService {
   /**
    * Map social provider to WorkOS provider type
    */
-  getWorkOSProvider(provider: string): 'GoogleOAuth' | 'MicrosoftOAuth' | 'AppleOAuth' | undefined {
+  getWorkOSProvider(
+    provider: string,
+  ): "GoogleOAuth" | "MicrosoftOAuth" | "AppleOAuth" | undefined {
     switch (provider) {
-      case 'google':
-        return 'GoogleOAuth';
-      case 'microsoft':
-        return 'MicrosoftOAuth';
-      case 'apple':
-        return 'AppleOAuth';
+      case "google":
+        return "GoogleOAuth";
+      case "microsoft":
+        return "MicrosoftOAuth";
+      case "apple":
+        return "AppleOAuth";
       default:
         return undefined;
     }
@@ -205,9 +228,9 @@ export class WorkOSService {
   /**
    * Check if a provider is available (has connection ID configured)
    */
-  isProviderAvailable(provider: 'google' | 'microsoft' | 'apple'): boolean {
+  isProviderAvailable(provider: "google" | "microsoft" | "apple"): boolean {
     const connectionId = this.getSocialConnectionId(provider);
-    return connectionId !== undefined && connectionId !== '';
+    return connectionId !== undefined && connectionId !== "";
   }
 
   /**
@@ -215,14 +238,23 @@ export class WorkOSService {
    */
   getAvailableProviders(): string[] {
     const providers: string[] = [];
-    if (this.isProviderAvailable('google') || this.getWorkOSProvider('google') !== undefined) {
-      providers.push('google');
+    if (
+      this.isProviderAvailable("google") ||
+      this.getWorkOSProvider("google") !== undefined
+    ) {
+      providers.push("google");
     }
-    if (this.isProviderAvailable('microsoft') || this.getWorkOSProvider('microsoft') !== undefined) {
-      providers.push('microsoft');
+    if (
+      this.isProviderAvailable("microsoft") ||
+      this.getWorkOSProvider("microsoft") !== undefined
+    ) {
+      providers.push("microsoft");
     }
-    if (this.isProviderAvailable('apple') || this.getWorkOSProvider('apple') !== undefined) {
-      providers.push('apple');
+    if (
+      this.isProviderAvailable("apple") ||
+      this.getWorkOSProvider("apple") !== undefined
+    ) {
+      providers.push("apple");
     }
     return providers;
   }

@@ -11,12 +11,12 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
-} from '@nestjs/common';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { AdminGuard } from '../guards/admin.guard';
-import { SsoRepository, EnterpriseLookupResult } from '../repositories/sso.repository';
-import { WorkOSService } from '../services/workos.service';
-import type { AuthProtocol } from '../../../database/schema/auth-connections';
+} from "@nestjs/common";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+import { AdminGuard } from "../guards/admin.guard";
+import { SsoRepository } from "../repositories/sso.repository";
+import { WorkOSService } from "../services/workos.service";
+import type { AuthProtocol } from "../../../database/schema/auth-connections";
 
 // ============================================================
 // DTOs
@@ -68,10 +68,10 @@ interface UpdateDomainDto {
 
 /**
  * SSO Controller
- * 
+ *
  * Public endpoints:
  * - POST /v1/sso/lookup - Check if email belongs to enterprise domain
- * 
+ *
  * Admin endpoints:
  * - GET /v1/sso/connections - List all SSO connections
  * - POST /v1/sso/connections - Create SSO connection
@@ -82,7 +82,7 @@ interface UpdateDomainDto {
  * - PUT /v1/sso/domains/:id - Update SSO domain
  * - DELETE /v1/sso/domains/:id - Delete SSO domain
  */
-@Controller('v1/sso')
+@Controller("v1/sso")
 export class SsoController {
   private readonly logger = new Logger(SsoController.name);
 
@@ -98,16 +98,16 @@ export class SsoController {
   /**
    * POST /v1/sso/lookup
    * Check if an email belongs to an enterprise SSO domain
-   * 
+   *
    * This is called before login to determine if the user should be
    * redirected to their organization's SSO provider (e.g., NYU, MIT)
    */
-  @Post('lookup')
+  @Post("lookup")
   async lookupEnterprise(
     @Body() dto: LookupEnterpriseDto,
   ): Promise<LookupEnterpriseResponseDto> {
-    if (!dto.email || !dto.email.includes('@')) {
-      throw new BadRequestException('Invalid email address');
+    if (!dto.email || !dto.email.includes("@")) {
+      throw new BadRequestException("Invalid email address");
     }
 
     const result = await this.ssoRepository.lookupEnterpriseByEmail(dto.email);
@@ -119,7 +119,8 @@ export class SsoController {
     return {
       isEnterprise: true,
       connectionId: result.connection?.id,
-      organizationName: result.domain?.organizationName ?? result.connection?.name,
+      organizationName:
+        result.domain?.organizationName ?? result.connection?.name,
       workosConnectionId: result.connection?.workosConnectionId ?? undefined,
     };
   }
@@ -128,9 +129,9 @@ export class SsoController {
    * GET /v1/sso/lookup
    * Same as POST but via query param (for convenience)
    */
-  @Get('lookup')
+  @Get("lookup")
   async lookupEnterpriseGet(
-    @Query('email') email: string,
+    @Query("email") email: string,
   ): Promise<LookupEnterpriseResponseDto> {
     return this.lookupEnterprise({ email });
   }
@@ -143,7 +144,7 @@ export class SsoController {
    * GET /v1/sso/connections
    * List all SSO connections (admin only)
    */
-  @Get('connections')
+  @Get("connections")
   @UseGuards(JwtAuthGuard, AdminGuard)
   async listConnections() {
     const connections = await this.ssoRepository.findAllConnections();
@@ -154,17 +155,17 @@ export class SsoController {
    * GET /v1/sso/connections/:id
    * Get a single SSO connection (admin only)
    */
-  @Get('connections/:id')
+  @Get("connections/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async getConnection(@Param('id') id: string) {
+  async getConnection(@Param("id") id: string) {
     const connection = await this.ssoRepository.findConnectionById(id);
     if (!connection) {
-      throw new NotFoundException('Connection not found');
+      throw new NotFoundException("Connection not found");
     }
-    
+
     // Get associated domains
     const domains = await this.ssoRepository.findDomainsByConnectionId(id);
-    
+
     return { connection, domains };
   }
 
@@ -172,11 +173,11 @@ export class SsoController {
    * POST /v1/sso/connections
    * Create a new SSO connection (admin only)
    */
-  @Post('connections')
+  @Post("connections")
   @UseGuards(JwtAuthGuard, AdminGuard)
   async createConnection(@Body() dto: CreateConnectionDto) {
     if (!dto.name || !dto.protocol) {
-      throw new BadRequestException('Name and protocol are required');
+      throw new BadRequestException("Name and protocol are required");
     }
 
     // Validate WorkOS connection if provided
@@ -184,7 +185,7 @@ export class SsoController {
       try {
         await this.workosService.getConnection(dto.workosConnectionId);
       } catch {
-        throw new BadRequestException('Invalid WorkOS connection ID');
+        throw new BadRequestException("Invalid WorkOS connection ID");
       }
     }
 
@@ -196,7 +197,9 @@ export class SsoController {
       isDefault: dto.isDefault ?? false,
     });
 
-    this.logger.log(`Created SSO connection: ${connection.id} (${connection.name})`);
+    this.logger.log(
+      `Created SSO connection: ${connection.id} (${connection.name})`,
+    );
     return { connection };
   }
 
@@ -204,23 +207,26 @@ export class SsoController {
    * PUT /v1/sso/connections/:id
    * Update an SSO connection (admin only)
    */
-  @Put('connections/:id')
+  @Put("connections/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
   async updateConnection(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateConnectionDto,
   ) {
     const existing = await this.ssoRepository.findConnectionById(id);
     if (!existing) {
-      throw new NotFoundException('Connection not found');
+      throw new NotFoundException("Connection not found");
     }
 
     // Validate WorkOS connection if being updated
-    if (dto.workosConnectionId && dto.workosConnectionId !== existing.workosConnectionId) {
+    if (
+      dto.workosConnectionId &&
+      dto.workosConnectionId !== existing.workosConnectionId
+    ) {
       try {
         await this.workosService.getConnection(dto.workosConnectionId);
       } catch {
-        throw new BadRequestException('Invalid WorkOS connection ID');
+        throw new BadRequestException("Invalid WorkOS connection ID");
       }
     }
 
@@ -234,12 +240,12 @@ export class SsoController {
    * Delete an SSO connection (admin only)
    * Note: This will also delete all associated domain mappings
    */
-  @Delete('connections/:id')
+  @Delete("connections/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async deleteConnection(@Param('id') id: string) {
+  async deleteConnection(@Param("id") id: string) {
     const existing = await this.ssoRepository.findConnectionById(id);
     if (!existing) {
-      throw new NotFoundException('Connection not found');
+      throw new NotFoundException("Connection not found");
     }
 
     await this.ssoRepository.deleteConnection(id);
@@ -255,7 +261,7 @@ export class SsoController {
    * GET /v1/sso/domains
    * List all SSO domain mappings (admin only)
    */
-  @Get('domains')
+  @Get("domains")
   @UseGuards(JwtAuthGuard, AdminGuard)
   async listDomains() {
     const domains = await this.ssoRepository.findDomainsWithConnections();
@@ -266,12 +272,12 @@ export class SsoController {
    * GET /v1/sso/domains/:id
    * Get a single SSO domain (admin only)
    */
-  @Get('domains/:id')
+  @Get("domains/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async getDomain(@Param('id') id: string) {
+  async getDomain(@Param("id") id: string) {
     const domain = await this.ssoRepository.findDomainById(id);
     if (!domain) {
-      throw new NotFoundException('Domain not found');
+      throw new NotFoundException("Domain not found");
     }
     return { domain };
   }
@@ -280,29 +286,33 @@ export class SsoController {
    * POST /v1/sso/domains
    * Create a new SSO domain mapping (admin only)
    */
-  @Post('domains')
+  @Post("domains")
   @UseGuards(JwtAuthGuard, AdminGuard)
   async createDomain(@Body() dto: CreateDomainDto) {
     if (!dto.domain || !dto.connectionId) {
-      throw new BadRequestException('Domain and connectionId are required');
+      throw new BadRequestException("Domain and connectionId are required");
     }
 
     // Validate domain format
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
     if (!domainRegex.test(dto.domain)) {
-      throw new BadRequestException('Invalid domain format');
+      throw new BadRequestException("Invalid domain format");
     }
 
     // Check connection exists
-    const connection = await this.ssoRepository.findConnectionById(dto.connectionId);
+    const connection = await this.ssoRepository.findConnectionById(
+      dto.connectionId,
+    );
     if (!connection) {
-      throw new NotFoundException('Connection not found');
+      throw new NotFoundException("Connection not found");
     }
 
     // Check domain doesn't already exist
-    const existingDomain = await this.ssoRepository.findDomainByName(dto.domain);
+    const existingDomain = await this.ssoRepository.findDomainByName(
+      dto.domain,
+    );
     if (existingDomain) {
-      throw new BadRequestException('Domain already exists');
+      throw new BadRequestException("Domain already exists");
     }
 
     // Validate email pattern if provided
@@ -310,7 +320,7 @@ export class SsoController {
       try {
         new RegExp(dto.emailPattern);
       } catch {
-        throw new BadRequestException('Invalid email pattern regex');
+        throw new BadRequestException("Invalid email pattern regex");
       }
     }
 
@@ -323,7 +333,9 @@ export class SsoController {
       emailPattern: dto.emailPattern,
     });
 
-    this.logger.log(`Created SSO domain mapping: ${domain.domain} -> ${connection.name}`);
+    this.logger.log(
+      `Created SSO domain mapping: ${domain.domain} -> ${connection.name}`,
+    );
     return { domain };
   }
 
@@ -331,36 +343,37 @@ export class SsoController {
    * PUT /v1/sso/domains/:id
    * Update an SSO domain mapping (admin only)
    */
-  @Put('domains/:id')
+  @Put("domains/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async updateDomain(
-    @Param('id') id: string,
-    @Body() dto: UpdateDomainDto,
-  ) {
+  async updateDomain(@Param("id") id: string, @Body() dto: UpdateDomainDto) {
     const existing = await this.ssoRepository.findDomainById(id);
     if (!existing) {
-      throw new NotFoundException('Domain not found');
+      throw new NotFoundException("Domain not found");
     }
 
     // Validate domain format if being updated
     if (dto.domain) {
       const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/;
       if (!domainRegex.test(dto.domain)) {
-        throw new BadRequestException('Invalid domain format');
+        throw new BadRequestException("Invalid domain format");
       }
 
       // Check if new domain already exists (and is not this one)
-      const existingDomain = await this.ssoRepository.findDomainByName(dto.domain);
+      const existingDomain = await this.ssoRepository.findDomainByName(
+        dto.domain,
+      );
       if (existingDomain && existingDomain.id !== id) {
-        throw new BadRequestException('Domain already exists');
+        throw new BadRequestException("Domain already exists");
       }
     }
 
     // Check connection exists if being updated
     if (dto.connectionId) {
-      const connection = await this.ssoRepository.findConnectionById(dto.connectionId);
+      const connection = await this.ssoRepository.findConnectionById(
+        dto.connectionId,
+      );
       if (!connection) {
-        throw new NotFoundException('Connection not found');
+        throw new NotFoundException("Connection not found");
       }
     }
 
@@ -369,7 +382,7 @@ export class SsoController {
       try {
         new RegExp(dto.emailPattern);
       } catch {
-        throw new BadRequestException('Invalid email pattern regex');
+        throw new BadRequestException("Invalid email pattern regex");
       }
     }
 
@@ -382,12 +395,12 @@ export class SsoController {
    * DELETE /v1/sso/domains/:id
    * Delete an SSO domain mapping (admin only)
    */
-  @Delete('domains/:id')
+  @Delete("domains/:id")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async deleteDomain(@Param('id') id: string) {
+  async deleteDomain(@Param("id") id: string) {
     const existing = await this.ssoRepository.findDomainById(id);
     if (!existing) {
-      throw new NotFoundException('Domain not found');
+      throw new NotFoundException("Domain not found");
     }
 
     await this.ssoRepository.deleteDomain(id);
@@ -404,14 +417,20 @@ export class SsoController {
    * List connections from WorkOS (admin only)
    * Useful for syncing or discovering available connections
    */
-  @Get('workos/connections')
+  @Get("workos/connections")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  async listWorkosConnections(@Query('organizationId') organizationId?: string) {
+  async listWorkosConnections(
+    @Query("organizationId") organizationId?: string,
+  ) {
     if (organizationId) {
-      const connections = await this.workosService.listConnections(organizationId);
+      const connections =
+        await this.workosService.listConnections(organizationId);
       return { connections: connections.data };
     }
     // Without org ID, we can't list - return empty
-    return { connections: [], message: 'Provide organizationId to list WorkOS connections' };
+    return {
+      connections: [],
+      message: "Provide organizationId to list WorkOS connections",
+    };
   }
 }

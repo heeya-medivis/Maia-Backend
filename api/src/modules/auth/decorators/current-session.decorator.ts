@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 
 export interface SessionInfo {
   sessionId: string;
@@ -6,7 +6,10 @@ export interface SessionInfo {
 }
 
 export const CurrentSession = createParamDecorator(
-  (data: keyof SessionInfo | undefined, ctx: ExecutionContext): SessionInfo | string | null => {
+  (
+    data: keyof SessionInfo | undefined,
+    ctx: ExecutionContext,
+  ): SessionInfo | string | null => {
     const request = ctx.switchToHttp().getRequest();
     const session = request.session as SessionInfo;
 

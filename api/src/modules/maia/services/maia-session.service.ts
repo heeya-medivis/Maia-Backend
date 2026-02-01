@@ -1,8 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { nanoid } from 'nanoid';
-import { MaiaSessionRepository } from '../repositories/maia-session.repository';
-import { NotFoundException, BadRequestException } from '../../../common/exceptions';
-import { MaiaSession, MaiaSessionTurn } from '../../../database/schema';
+import { Injectable, Logger } from "@nestjs/common";
+import { nanoid } from "nanoid";
+import { MaiaSessionRepository } from "../repositories/maia-session.repository";
+import {
+  NotFoundException,
+  BadRequestException,
+} from "../../../common/exceptions";
+import { MaiaSession, MaiaSessionTurn } from "../../../database/schema";
 
 @Injectable()
 export class MaiaSessionService {
@@ -54,12 +57,12 @@ export class MaiaSessionService {
     // Verify session exists and belongs to user
     const session = await this.repository.findSessionById(sessionId);
     if (!session) {
-      throw new NotFoundException('Session not found', 'SESSION_NOT_FOUND');
+      throw new NotFoundException("Session not found", "SESSION_NOT_FOUND");
     }
     if (session.userId !== userId) {
       throw new BadRequestException(
-        'Session does not belong to user',
-        'SESSION_UNAUTHORIZED',
+        "Session does not belong to user",
+        "SESSION_UNAUTHORIZED",
       );
     }
 
@@ -109,12 +112,12 @@ export class MaiaSessionService {
     // Verify session exists and belongs to user
     const session = await this.repository.findSessionById(sessionId);
     if (!session) {
-      throw new NotFoundException('Session not found', 'SESSION_NOT_FOUND');
+      throw new NotFoundException("Session not found", "SESSION_NOT_FOUND");
     }
     if (session.userId !== userId) {
       throw new BadRequestException(
-        'Session does not belong to user',
-        'SESSION_UNAUTHORIZED',
+        "Session does not belong to user",
+        "SESSION_UNAUTHORIZED",
       );
     }
 

@@ -1,8 +1,15 @@
-import { Controller, Get, Query, Param, UseGuards, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../../auth/guards/admin.guard';
-import { AdminUsageService } from '../services/admin-usage.service';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  UseGuards,
+  NotFoundException,
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { AdminGuard } from "../../auth/guards/admin.guard";
+import { AdminUsageService } from "../services/admin-usage.service";
 import {
   DateRangeQueryDto,
   OverallStatsResponseDto,
@@ -10,7 +17,7 @@ import {
   OrganizationUsageStatsDto,
   UserDetailResponseDto,
   OrganizationDetailResponseDto,
-} from '../dto';
+} from "../dto";
 
 /**
  * Admin Usage Controller
@@ -23,9 +30,9 @@ import {
  * - GET /api/admin/usage/user/:userId   - User detail with sessions
  * - GET /api/admin/usage/organization/:organizationName - Organization detail
  */
-@ApiTags('Admin Usage')
+@ApiTags("Admin Usage")
 @ApiBearerAuth()
-@Controller('api/admin/usage')
+@Controller("api/admin/usage")
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminUsageController {
   constructor(private readonly usageService: AdminUsageService) {}
@@ -34,8 +41,8 @@ export class AdminUsageController {
    * GET /api/admin/usage/stats
    * Get overall usage statistics
    */
-  @Get('stats')
-  @ApiOperation({ summary: 'Get overall usage statistics (admin only)' })
+  @Get("stats")
+  @ApiOperation({ summary: "Get overall usage statistics (admin only)" })
   async getOverallStats(
     @Query() query: DateRangeQueryDto,
   ): Promise<OverallStatsResponseDto> {
@@ -48,8 +55,8 @@ export class AdminUsageController {
    * GET /api/admin/usage/by-user
    * Get usage statistics grouped by user
    */
-  @Get('by-user')
-  @ApiOperation({ summary: 'Get usage statistics by user (admin only)' })
+  @Get("by-user")
+  @ApiOperation({ summary: "Get usage statistics by user (admin only)" })
   async getUsageByUser(
     @Query() query: DateRangeQueryDto,
   ): Promise<UserUsageStatsDto[]> {
@@ -62,8 +69,10 @@ export class AdminUsageController {
    * GET /api/admin/usage/by-organization
    * Get usage statistics grouped by organization
    */
-  @Get('by-organization')
-  @ApiOperation({ summary: 'Get usage statistics by organization (admin only)' })
+  @Get("by-organization")
+  @ApiOperation({
+    summary: "Get usage statistics by organization (admin only)",
+  })
   async getUsageByOrganization(
     @Query() query: DateRangeQueryDto,
   ): Promise<OrganizationUsageStatsDto[]> {
@@ -76,14 +85,16 @@ export class AdminUsageController {
    * GET /api/admin/usage/user/:userId
    * Get detailed usage data for a specific user
    */
-  @Get('user/:userId')
-  @ApiOperation({ summary: 'Get detailed usage data for a specific user (admin only)' })
+  @Get("user/:userId")
+  @ApiOperation({
+    summary: "Get detailed usage data for a specific user (admin only)",
+  })
   async getUserDetail(
-    @Param('userId') userId: string,
+    @Param("userId") userId: string,
   ): Promise<UserDetailResponseDto> {
     const result = await this.usageService.getUserDetail(userId);
     if (!result) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
     return result;
   }
@@ -92,14 +103,17 @@ export class AdminUsageController {
    * GET /api/admin/usage/organization/:organizationName
    * Get detailed usage data for a specific organization
    */
-  @Get('organization/:organizationName')
-  @ApiOperation({ summary: 'Get detailed usage data for a specific organization (admin only)' })
+  @Get("organization/:organizationName")
+  @ApiOperation({
+    summary: "Get detailed usage data for a specific organization (admin only)",
+  })
   async getOrganizationDetail(
-    @Param('organizationName') organizationName: string,
+    @Param("organizationName") organizationName: string,
   ): Promise<OrganizationDetailResponseDto> {
-    const result = await this.usageService.getOrganizationDetail(organizationName);
+    const result =
+      await this.usageService.getOrganizationDetail(organizationName);
     if (!result) {
-      throw new NotFoundException('Organization not found');
+      throw new NotFoundException("Organization not found");
     }
     return result;
   }

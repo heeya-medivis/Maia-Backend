@@ -1,8 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { maiaHosts, MaiaHost, NewMaiaHost } from '../../../database/schema';
-import { nanoid } from 'nanoid';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { maiaHosts, MaiaHost, NewMaiaHost } from "../../../database/schema";
+import { nanoid } from "nanoid";
 
 @Injectable()
 export class MaiaHostsRepository {
@@ -29,7 +29,9 @@ export class MaiaHostsRepository {
    * Find by model ID including soft-deleted records
    * Used when reactivating a host (like IgnoreQueryFilters in C#)
    */
-  async findByModelIdIncludeDeleted(maiaModelId: string): Promise<MaiaHost | null> {
+  async findByModelIdIncludeDeleted(
+    maiaModelId: string,
+  ): Promise<MaiaHost | null> {
     const [host] = await this.db
       .select()
       .from(maiaHosts)
@@ -38,7 +40,7 @@ export class MaiaHostsRepository {
     return host ?? null;
   }
 
-  async create(data: Omit<NewMaiaHost, 'id'>): Promise<MaiaHost> {
+  async create(data: Omit<NewMaiaHost, "id">): Promise<MaiaHost> {
     const [host] = await this.db
       .insert(maiaHosts)
       .values({

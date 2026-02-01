@@ -10,29 +10,33 @@ import {
   UnauthorizedException,
   Logger,
   Inject,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Response, Request } from 'express';
-import * as crypto from 'crypto';
-import { nanoid } from 'nanoid';
-import { eq, and } from 'drizzle-orm';
-import { WorkOSService } from '../services/workos.service';
-import { SessionService } from '../services/session.service';
-import { SsoRepository } from '../repositories/sso.repository';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { users, oauthAuthorizationCodes, identities } from '../../../database/schema';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Response, Request } from "express";
+import * as crypto from "crypto";
+import { nanoid } from "nanoid";
+import { eq, and } from "drizzle-orm";
+import { WorkOSService } from "../services/workos.service";
+import { SessionService } from "../services/session.service";
+import { SsoRepository } from "../repositories/sso.repository";
+import { UsersService } from "../../users/users.service";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import {
+  users,
+  oauthAuthorizationCodes,
+  identities,
+} from "../../../database/schema";
 import {
   encodeOAuthState,
   decodeOAuthState,
   getJwks,
-  type OAuthState,
-} from '../../../utils/jwt';
-import type { AuthProtocol } from '../../../database/schema/auth-connections';
-import type { IdentityProvider } from '../../../database/schema/identities';
+} from "../../../utils/jwt";
+import type { AuthProtocol } from "../../../database/schema/auth-connections";
+import type { IdentityProvider } from "../../../database/schema/identities";
 
 const AUTH_CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-@Controller('v1/oauth')
+@Controller("v1/oauth")
 export class OAuthController {
   private readonly logger = new Logger(OAuthController.name);
   private readonly jwtAudience: string;
@@ -43,13 +47,23 @@ export class OAuthController {
     private readonly workosService: WorkOSService,
     private readonly sessionService: SessionService,
     private readonly ssoRepository: SsoRepository,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
-    this.jwtAudience = this.configService.get<string>('JWT_AUDIENCE', 'maia-api');
-    this.allowedClientIds = this.configService.get<string[]>('ALLOWED_CLIENT_IDS', ['maia-web', 'maia_desktop']);
-    this.webRedirectUris = this.configService.get<string[]>('WEB_REDIRECT_URIS', []);
+    this.jwtAudience = this.configService.get<string>(
+      "JWT_AUDIENCE",
+      "maia-api",
+    );
+    this.allowedClientIds = this.configService.get<string[]>(
+      "ALLOWED_CLIENT_IDS",
+      ["maia-web", "maia_desktop"],
+    );
+    this.webRedirectUris = this.configService.get<string[]>(
+      "WEB_REDIRECT_URIS",
+      [],
+    );
   }
 
   /**
@@ -83,77 +97,93 @@ export class OAuthController {
    */
   private isValidClientId(clientId: string | undefined): boolean {
     if (!clientId) return false;
-    return this.allowedClientIds.includes(clientId) || clientId === this.jwtAudience;
+    return (
+      this.allowedClientIds.includes(clientId) || clientId === this.jwtAudience
+    );
   }
 
   /**
    * Map connection type to identity provider enum
    */
-  private mapConnectionTypeToProvider(connectionType: string, provider?: string): IdentityProvider {
-    if (provider === 'google' || connectionType === 'GoogleOAuth') {
-      return 'workos_oidc_google';
+  private mapConnectionTypeToProvider(
+    connectionType: string,
+    provider?: string,
+  ): IdentityProvider {
+    if (provider === "google" || connectionType === "GoogleOAuth") {
+      return "workos_oidc_google";
     }
-    if (provider === 'microsoft' || connectionType === 'MicrosoftOAuth') {
-      return 'workos_oidc_microsoft';
+    if (provider === "microsoft" || connectionType === "MicrosoftOAuth") {
+      return "workos_oidc_microsoft";
     }
-    if (provider === 'apple' || connectionType === 'AppleOAuth') {
-      return 'workos_oidc_apple';
+    if (provider === "apple" || connectionType === "AppleOAuth") {
+      return "workos_oidc_apple";
     }
-    return 'workos_sso';
+    return "workos_sso";
   }
 
   /**
    * Map provider to auth protocol
    */
-  private mapProviderToAuthProtocol(provider?: string, connectionId?: string): AuthProtocol {
-    if (connectionId) return 'workos_sso';
+  private mapProviderToAuthProtocol(
+    provider?: string,
+    connectionId?: string,
+  ): AuthProtocol {
+    if (connectionId) return "workos_sso";
     switch (provider) {
-      case 'google': return 'workos_oidc_google';
-      case 'microsoft': return 'workos_oidc_microsoft';
-      case 'apple': return 'workos_oidc_apple';
-      default: return 'workos_oidc_google';
+      case "google":
+        return "workos_oidc_google";
+      case "microsoft":
+        return "workos_oidc_microsoft";
+      case "apple":
+        return "workos_oidc_apple";
+      default:
+        return "workos_oidc_google";
     }
   }
 
   /**
    * GET /v1/oauth/authorize
    * OAuth 2.0 Authorization endpoint with PKCE support
-   * 
+   *
    * Supports enterprise SSO:
    * - If login_hint contains an email with an enterprise domain, redirects to that SSO
    * - If connection_id is provided, uses that specific WorkOS connection
    * - Otherwise uses the specified provider or defaults to Google
    */
-  @Get('authorize')
+  @Get("authorize")
   async authorize(
-    @Query('response_type') responseType: string,
-    @Query('client_id') clientId: string,
-    @Query('redirect_uri') redirectUri: string,
-    @Query('state') state: string,
-    @Query('code_challenge') codeChallenge: string,
-    @Query('code_challenge_method') codeChallengeMethod: string,
-    @Query('provider') provider?: string,
-    @Query('connection_id') connectionId?: string,
-    @Query('login_hint') loginHint?: string,
-    @Query('device_id') deviceId?: string,
-    @Query('device_platform') devicePlatform?: string,
+    @Query("response_type") responseType: string,
+    @Query("client_id") clientId: string,
+    @Query("redirect_uri") redirectUri: string,
+    @Query("state") state: string,
+    @Query("code_challenge") codeChallenge: string,
+    @Query("code_challenge_method") codeChallengeMethod: string,
+    @Query("provider") provider?: string,
+    @Query("connection_id") connectionId?: string,
+    @Query("login_hint") loginHint?: string,
+    @Query("device_id") deviceId?: string,
+    @Query("device_platform") devicePlatform?: string,
     @Res() res?: Response,
   ): Promise<void> {
     // Validate required OAuth params
-    if (responseType !== 'code') {
+    if (responseType !== "code") {
       throw new BadRequestException('Invalid response_type: must be "code"');
     }
 
     if (!this.isValidClientId(clientId)) {
-      throw new BadRequestException(`Invalid client_id. Allowed: ${this.allowedClientIds.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid client_id. Allowed: ${this.allowedClientIds.join(", ")}`,
+      );
     }
 
     if (!redirectUri || !this.isValidRedirectUri(redirectUri)) {
-      throw new BadRequestException('Invalid redirect_uri');
+      throw new BadRequestException("Invalid redirect_uri");
     }
 
-    if (!codeChallenge || codeChallengeMethod !== 'S256' || !state) {
-      throw new BadRequestException('Missing PKCE parameters (code_challenge, code_challenge_method=S256, state)');
+    if (!codeChallenge || codeChallengeMethod !== "S256" || !state) {
+      throw new BadRequestException(
+        "Missing PKCE parameters (code_challenge, code_challenge_method=S256, state)",
+      );
     }
 
     // Check for enterprise SSO via login_hint (email)
@@ -161,18 +191,27 @@ export class OAuthController {
     let workosConnectionId: string | undefined;
     let enterpriseOrgName: string | undefined;
 
-    if (loginHint && loginHint.includes('@') && !connectionId && !provider) {
-      const enterpriseLookup = await this.ssoRepository.lookupEnterpriseByEmail(loginHint);
-      if (enterpriseLookup.isEnterprise && enterpriseLookup.connection?.workosConnectionId) {
+    if (loginHint && loginHint.includes("@") && !connectionId && !provider) {
+      const enterpriseLookup =
+        await this.ssoRepository.lookupEnterpriseByEmail(loginHint);
+      if (
+        enterpriseLookup.isEnterprise &&
+        enterpriseLookup.connection?.workosConnectionId
+      ) {
         workosConnectionId = enterpriseLookup.connection.workosConnectionId;
-        enterpriseOrgName = enterpriseLookup.domain?.organizationName ?? enterpriseLookup.connection.name;
-        this.logger.log(`Enterprise SSO detected for ${loginHint} -> ${enterpriseOrgName}`);
+        enterpriseOrgName =
+          enterpriseLookup.domain?.organizationName ??
+          enterpriseLookup.connection.name;
+        this.logger.log(
+          `Enterprise SSO detected for ${loginHint} -> ${enterpriseOrgName}`,
+        );
       }
     }
 
     // Use provided connection_id if specified
     if (connectionId) {
-      const connection = await this.ssoRepository.findConnectionById(connectionId);
+      const connection =
+        await this.ssoRepository.findConnectionById(connectionId);
       if (connection?.workosConnectionId) {
         workosConnectionId = connection.workosConnectionId;
       }
@@ -182,16 +221,11 @@ export class OAuthController {
     if (!provider && !workosConnectionId) {
       const providers = this.workosService.getAvailableProviders();
       if (providers.length === 0) {
-        throw new BadRequestException('No authentication providers configured');
+        throw new BadRequestException("No authentication providers configured");
       }
       // Default to first available provider
       provider = providers[0];
     }
-
-    // Determine auth protocol
-    const authProtocol = workosConnectionId 
-      ? 'workos_sso' as AuthProtocol
-      : this.mapProviderToAuthProtocol(provider, connectionId);
 
     // Encode OAuth state with HMAC signature
     // Use the frontend's state as nonce - this will be returned in the callback
@@ -210,14 +244,18 @@ export class OAuthController {
     // Build WorkOS authorization URL
     const workosAuthUrl = this.workosService.getAuthorizationUrl({
       connectionId: workosConnectionId,
-      provider: workosConnectionId ? undefined : this.workosService.getWorkOSProvider(provider ?? 'google'),
+      provider: workosConnectionId
+        ? undefined
+        : this.workosService.getWorkOSProvider(provider ?? "google"),
       loginHint,
       state: oauthState,
       codeChallenge,
-      codeChallengeMethod: 'S256',
+      codeChallengeMethod: "S256",
     });
 
-    this.logger.log(`Redirecting to WorkOS for ${workosConnectionId ? 'enterprise SSO' : (provider ?? 'SSO')} auth`);
+    this.logger.log(
+      `Redirecting to WorkOS for ${workosConnectionId ? "enterprise SSO" : (provider ?? "SSO")} auth`,
+    );
     res!.redirect(workosAuthUrl);
   }
 
@@ -225,73 +263,84 @@ export class OAuthController {
    * GET /v1/oauth/callback
    * WorkOS callback - exchanges WorkOS code for user profile
    */
-  @Get('callback')
+  @Get("callback")
   async callback(
-    @Query('code') workosCode: string,
-    @Query('state') encodedState: string,
+    @Query("code") workosCode: string,
+    @Query("state") encodedState: string,
     @Res() res: Response,
   ): Promise<void> {
     if (!workosCode || !encodedState) {
-      throw new BadRequestException('Missing code or state parameter');
+      throw new BadRequestException("Missing code or state parameter");
     }
 
     // Decode and verify state
     const state = decodeOAuthState(encodedState);
     if (!state) {
-      throw new BadRequestException('Invalid or tampered state parameter');
+      throw new BadRequestException("Invalid or tampered state parameter");
     }
 
     try {
       // Exchange WorkOS code for profile
-      const { profile } = await this.workosService.getProfileAndToken(workosCode);
+      const { profile } =
+        await this.workosService.getProfileAndToken(workosCode);
 
       this.logger.log(`WorkOS callback for email: ${profile.email}`);
 
       // Find or create user
       let user = await this.findUserByEmail(profile.email);
-      
+
       if (!user) {
         // Create new user
         user = await this.createUser({
           email: profile.email,
-          firstName: profile.firstName ?? '',
-          lastName: profile.lastName ?? '',
+          firstName: profile.firstName ?? "",
+          lastName: profile.lastName ?? "",
         });
         this.logger.log(`Created new user: ${user.id}`);
       } else {
         // Update user's name if it was missing and now available from profile
-        const needsUpdate = 
-          (!user.firstName && profile.firstName) || 
+        const needsUpdate =
+          (!user.firstName && profile.firstName) ||
           (!user.lastName && profile.lastName);
-        
+
         if (needsUpdate) {
           await this.db
             .update(users)
             .set({
-              firstName: user.firstName || profile.firstName || '',
-              lastName: user.lastName || profile.lastName || '',
+              firstName: user.firstName || profile.firstName || "",
+              lastName: user.lastName || profile.lastName || "",
               updatedAt: new Date(),
             })
             .where(eq(users.id, user.id));
-          
+
           // Update local user object
-          user = { ...user, firstName: user.firstName || profile.firstName || '', lastName: user.lastName || profile.lastName || '' };
+          user = {
+            ...user,
+            firstName: user.firstName || profile.firstName || "",
+            lastName: user.lastName || profile.lastName || "",
+          };
           this.logger.log(`Updated user name: ${user.id}`);
         }
       }
 
       // Update last login timestamp based on platform
-      const isWebLogin = state.devicePlatform === 'web' || !state.devicePlatform;
+      const isWebLogin =
+        state.devicePlatform === "web" || !state.devicePlatform;
       await this.db
         .update(users)
         .set({
-          ...(isWebLogin ? { lastLoginWeb: new Date() } : { lastLoginApp: new Date() }),
+          ...(isWebLogin
+            ? { lastLoginWeb: new Date() }
+            : { lastLoginApp: new Date() }),
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
 
       // Upsert identity
-      const identityProvider = this.mapConnectionTypeToProvider(profile.connectionType, state.provider);
+      const identityProvider = this.mapConnectionTypeToProvider(
+        profile.connectionType,
+        state.provider,
+      );
       await this.upsertIdentity({
         userId: user.id,
         provider: identityProvider,
@@ -302,7 +351,10 @@ export class OAuthController {
 
       // Generate our authorization code
       const authCode = nanoid(32);
-      const authProtocol = this.mapProviderToAuthProtocol(state.provider, state.connectionId);
+      const authProtocol = this.mapProviderToAuthProtocol(
+        state.provider,
+        state.connectionId,
+      );
 
       await this.db.insert(oauthAuthorizationCodes).values({
         id: authCode,
@@ -310,7 +362,7 @@ export class OAuthController {
         clientId: state.clientId,
         redirectUri: state.redirectUri,
         codeChallenge: state.codeChallenge,
-        codeChallengeMethod: 'S256',
+        codeChallengeMethod: "S256",
         authMethod: authProtocol,
         deviceId: state.deviceId,
         devicePlatform: state.devicePlatform,
@@ -319,18 +371,21 @@ export class OAuthController {
 
       // Redirect back to client with our auth code
       const redirectUrl = new URL(state.redirectUri);
-      redirectUrl.searchParams.set('code', authCode);
-      redirectUrl.searchParams.set('state', state.nonce);
+      redirectUrl.searchParams.set("code", authCode);
+      redirectUrl.searchParams.set("state", state.nonce);
 
       this.logger.log(`Redirecting to client: ${state.redirectUri}`);
       res.redirect(redirectUrl.toString());
     } catch (error) {
       this.logger.error(`WorkOS callback error: ${error.message}`);
-      
+
       // Redirect to client with error
       const redirectUrl = new URL(state.redirectUri);
-      redirectUrl.searchParams.set('error', 'access_denied');
-      redirectUrl.searchParams.set('error_description', 'Authentication failed');
+      redirectUrl.searchParams.set("error", "access_denied");
+      redirectUrl.searchParams.set(
+        "error_description",
+        "Authentication failed",
+      );
       res.redirect(redirectUrl.toString());
     }
   }
@@ -339,21 +394,23 @@ export class OAuthController {
    * POST /v1/oauth/token
    * Token endpoint - exchanges auth code for access/refresh tokens
    */
-  @Post('token')
+  @Post("token")
   async token(
-    @Body('grant_type') grantType: string,
-    @Body('code') code: string,
-    @Body('redirect_uri') redirectUri: string,
-    @Body('code_verifier') codeVerifier: string,
-    @Body('refresh_token') refreshToken: string,
+    @Body("grant_type") grantType: string,
+    @Body("code") code: string,
+    @Body("redirect_uri") redirectUri: string,
+    @Body("code_verifier") codeVerifier: string,
+    @Body("refresh_token") refreshToken: string,
     @Req() req: Request,
   ) {
-    if (grantType === 'authorization_code') {
+    if (grantType === "authorization_code") {
       return this.exchangeAuthCode(code, redirectUri, codeVerifier, req);
-    } else if (grantType === 'refresh_token') {
+    } else if (grantType === "refresh_token") {
       return this.refreshTokens(refreshToken, req);
     } else {
-      throw new BadRequestException('Invalid grant_type. Must be authorization_code or refresh_token');
+      throw new BadRequestException(
+        "Invalid grant_type. Must be authorization_code or refresh_token",
+      );
     }
   }
 
@@ -367,7 +424,7 @@ export class OAuthController {
     req: Request,
   ) {
     if (!code || !redirectUri || !codeVerifier) {
-      throw new BadRequestException('Missing required parameters');
+      throw new BadRequestException("Missing required parameters");
     }
 
     // Find authorization code
@@ -378,29 +435,29 @@ export class OAuthController {
       .limit(1);
 
     if (!authCode) {
-      throw new UnauthorizedException('Invalid authorization code');
+      throw new UnauthorizedException("Invalid authorization code");
     }
 
     if (authCode.usedAt) {
-      throw new UnauthorizedException('Authorization code already used');
+      throw new UnauthorizedException("Authorization code already used");
     }
 
     if (authCode.expiresAt < new Date()) {
-      throw new UnauthorizedException('Authorization code expired');
+      throw new UnauthorizedException("Authorization code expired");
     }
 
     if (authCode.redirectUri !== redirectUri) {
-      throw new UnauthorizedException('Redirect URI mismatch');
+      throw new UnauthorizedException("Redirect URI mismatch");
     }
 
     // Verify PKCE code_verifier
     const expectedChallenge = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(codeVerifier)
-      .digest('base64url');
+      .digest("base64url");
 
     if (expectedChallenge !== authCode.codeChallenge) {
-      throw new UnauthorizedException('Invalid code_verifier');
+      throw new UnauthorizedException("Invalid code_verifier");
     }
 
     // Mark code as used
@@ -415,8 +472,8 @@ export class OAuthController {
       deviceId: authCode.deviceId ?? undefined,
       devicePlatform: authCode.devicePlatform ?? undefined,
       authMethod: authCode.authMethod!,
-      ipAddress: req.headers['x-forwarded-for'] as string ?? req.ip,
-      userAgent: req.headers['user-agent'],
+      ipAddress: (req.headers["x-forwarded-for"] as string) ?? req.ip,
+      userAgent: req.headers["user-agent"],
     });
 
     // Get user info
@@ -430,7 +487,7 @@ export class OAuthController {
       success: true,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      tokenType: 'Bearer',
+      tokenType: "Bearer",
       expiresAt: tokens.expiresAt.toISOString(),
       refreshExpiresAt: tokens.refreshExpiresAt.toISOString(),
       userId: user?.id,
@@ -442,20 +499,20 @@ export class OAuthController {
    */
   private async refreshTokens(refreshToken: string, req: Request) {
     if (!refreshToken) {
-      throw new BadRequestException('Missing refresh_token');
+      throw new BadRequestException("Missing refresh_token");
     }
 
     const tokens = await this.sessionService.refreshSession({
       refreshToken,
-      ipAddress: req.headers['x-forwarded-for'] as string ?? req.ip,
-      userAgent: req.headers['user-agent'],
+      ipAddress: (req.headers["x-forwarded-for"] as string) ?? req.ip,
+      userAgent: req.headers["user-agent"],
     });
 
     return {
       success: true,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      tokenType: 'Bearer',
+      tokenType: "Bearer",
       expiresAt: tokens.expiresAt.toISOString(),
       refreshExpiresAt: tokens.refreshExpiresAt.toISOString(),
     };
@@ -465,7 +522,7 @@ export class OAuthController {
    * GET /v1/oauth/.well-known/jwks.json
    * JWKS endpoint for public key distribution
    */
-  @Get('.well-known/jwks.json')
+  @Get(".well-known/jwks.json")
   async jwks() {
     return getJwks();
   }
@@ -481,17 +538,17 @@ export class OAuthController {
     return user ?? null;
   }
 
-  private async createUser(data: { email: string; firstName: string; lastName: string }) {
-    const [user] = await this.db
-      .insert(users)
-      .values({
-        id: nanoid(),
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      })
-      .returning();
-    return user;
+  private async createUser(data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }) {
+    return this.usersService.create({
+      id: nanoid(),
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
   }
 
   private async upsertIdentity(data: {

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsBoolean,
   IsString,
@@ -8,7 +8,7 @@ import {
   IsNumber,
   ValidateIf,
   IsIP,
-} from 'class-validator';
+} from "class-validator";
 
 export enum Provider {
   Invalid = 0,
@@ -71,7 +71,7 @@ export class CreateMaiaModelDto {
   @ApiPropertyOptional()
   @ValidateIf((o) => o.provider === Provider.SELF)
   @IsOptional()
-  @IsIP('4', { message: 'Please enter a valid IPv4 address.' })
+  @IsIP("4", { message: "Please enter a valid IPv4 address." })
   serverIp?: string;
 }
 

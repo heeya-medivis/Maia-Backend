@@ -6,29 +6,28 @@ import {
   Delete,
   Param,
   Body,
-  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../../auth/guards/admin.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { MaiaModelsService } from '../services/maia-models.service';
-import { MaiaPromptsService } from '../services/maia-prompts.service';
-import { UserMaiaAccessService } from '../services/user-maia-access.service';
-import { CreateMaiaModelDto, UpdateMaiaModelDto, MaiaPromptDto } from '../dto';
-import { User } from '../../../database/schema';
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { AdminGuard } from "../../auth/guards/admin.guard";
+import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { MaiaModelsService } from "../services/maia-models.service";
+import { MaiaPromptsService } from "../services/maia-prompts.service";
+import { UserMaiaAccessService } from "../services/user-maia-access.service";
+import { CreateMaiaModelDto, UpdateMaiaModelDto, MaiaPromptDto } from "../dto";
+import { User } from "../../../database/schema";
 
 /**
  * MAIA Admin Controller
  * Matches C# MAIAModelsController (admin panel operations)
  * Used by Next.js web admin for managing models
  */
-@ApiTags('MAIA Admin')
+@ApiTags("MAIA Admin")
 @ApiBearerAuth()
-@Controller('api/admin/maia')
+@Controller("api/admin/maia")
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class MaiaAdminController {
   constructor(
@@ -46,8 +45,8 @@ export class MaiaAdminController {
    * List all models (for admin index page)
    * Matches C# MAIAModelsController.Index()
    */
-  @Get('models')
-  @ApiOperation({ summary: 'List all MAIA models' })
+  @Get("models")
+  @ApiOperation({ summary: "List all MAIA models" })
   async listModels() {
     return this.modelsService.findAll();
   }
@@ -57,9 +56,9 @@ export class MaiaAdminController {
    * Get model with all relations (for manage page)
    * Matches C# MAIAModelsController.Manage()
    */
-  @Get('models/:id')
-  @ApiOperation({ summary: 'Get MAIA model with relations' })
-  async getModel(@Param('id') id: string) {
+  @Get("models/:id")
+  @ApiOperation({ summary: "Get MAIA model with relations" })
+  async getModel(@Param("id") id: string) {
     return this.modelsService.findByIdWithRelations(id);
   }
 
@@ -68,8 +67,8 @@ export class MaiaAdminController {
    * Create a new model
    * Matches C# MAIAModelsController.Create()
    */
-  @Post('models')
-  @ApiOperation({ summary: 'Create a new MAIA model' })
+  @Post("models")
+  @ApiOperation({ summary: "Create a new MAIA model" })
   async createModel(
     @Body() dto: CreateMaiaModelDto,
     @CurrentUser() user: User,
@@ -83,7 +82,9 @@ export class MaiaAdminController {
         provider: this.mapProvider(dto.provider),
         pricing: dto.pricing,
         isActive: dto.isActive,
-        hostProvider: dto.hostProvider ? this.mapHostProvider(dto.hostProvider) : undefined,
+        hostProvider: dto.hostProvider
+          ? this.mapHostProvider(dto.hostProvider)
+          : undefined,
         serverIp: dto.serverIp,
       },
       user.id,
@@ -95,10 +96,10 @@ export class MaiaAdminController {
    * Update a model
    * Matches C# MAIAModelsController.Edit()
    */
-  @Put('models/:id')
-  @ApiOperation({ summary: 'Update a MAIA model' })
+  @Put("models/:id")
+  @ApiOperation({ summary: "Update a MAIA model" })
   async updateModel(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateMaiaModelDto,
     @CurrentUser() user: User,
   ) {
@@ -112,7 +113,9 @@ export class MaiaAdminController {
         provider: this.mapProvider(dto.provider),
         pricing: dto.pricing,
         isActive: dto.isActive,
-        hostProvider: dto.hostProvider ? this.mapHostProvider(dto.hostProvider) : undefined,
+        hostProvider: dto.hostProvider
+          ? this.mapHostProvider(dto.hostProvider)
+          : undefined,
         serverIp: dto.serverIp,
       },
       user.id,
@@ -124,10 +127,10 @@ export class MaiaAdminController {
    * Delete a model
    * Matches C# MAIAModelsController.Delete()
    */
-  @Delete('models/:id')
+  @Delete("models/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a MAIA model' })
-  async deleteModel(@Param('id') id: string, @CurrentUser() user: User) {
+  @ApiOperation({ summary: "Delete a MAIA model" })
+  async deleteModel(@Param("id") id: string, @CurrentUser() user: User) {
     await this.modelsService.softDelete(id, user.id);
   }
 
@@ -140,10 +143,10 @@ export class MaiaAdminController {
    * Create a new prompt
    * Matches C# MAIAModelsController.CreatePrompt()
    */
-  @Post('models/:modelId/prompts')
-  @ApiOperation({ summary: 'Create a new prompt for a model' })
+  @Post("models/:modelId/prompts")
+  @ApiOperation({ summary: "Create a new prompt for a model" })
   async createPrompt(
-    @Param('modelId') modelId: string,
+    @Param("modelId") modelId: string,
     @Body() dto: MaiaPromptDto,
     @CurrentUser() user: User,
   ) {
@@ -155,10 +158,10 @@ export class MaiaAdminController {
    * Update a prompt
    * Matches C# MAIAModelsController.UpdatePrompt()
    */
-  @Put('prompts/:promptId')
-  @ApiOperation({ summary: 'Update a prompt' })
+  @Put("prompts/:promptId")
+  @ApiOperation({ summary: "Update a prompt" })
   async updatePrompt(
-    @Param('promptId') promptId: string,
+    @Param("promptId") promptId: string,
     @Body() dto: MaiaPromptDto,
     @CurrentUser() user: User,
   ) {
@@ -170,11 +173,11 @@ export class MaiaAdminController {
    * Delete a prompt
    * Matches C# MAIAModelsController.DeletePrompt()
    */
-  @Delete('prompts/:promptId')
+  @Delete("prompts/:promptId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a prompt' })
+  @ApiOperation({ summary: "Delete a prompt" })
   async deletePrompt(
-    @Param('promptId') promptId: string,
+    @Param("promptId") promptId: string,
     @CurrentUser() user: User,
   ) {
     await this.promptsService.softDelete(promptId, user.id);
@@ -188,9 +191,9 @@ export class MaiaAdminController {
    * GET /api/admin/maia/models/:modelId/users
    * Get users with active access to this model
    */
-  @Get('models/:modelId/users')
-  @ApiOperation({ summary: 'Get users with access to this model' })
-  async getUsersWithAccess(@Param('modelId') modelId: string) {
+  @Get("models/:modelId/users")
+  @ApiOperation({ summary: "Get users with access to this model" })
+  async getUsersWithAccess(@Param("modelId") modelId: string) {
     return this.userAccessService.getUsersWithAccess(modelId);
   }
 
@@ -199,9 +202,9 @@ export class MaiaAdminController {
    * Get users without access to this model
    * Matches C# MAIAModelsController.GetAvailableUsers()
    */
-  @Get('models/:modelId/available-users')
-  @ApiOperation({ summary: 'Get users without access to this model' })
-  async getAvailableUsers(@Param('modelId') modelId: string) {
+  @Get("models/:modelId/available-users")
+  @ApiOperation({ summary: "Get users without access to this model" })
+  async getAvailableUsers(@Param("modelId") modelId: string) {
     return this.userAccessService.getAvailableUsers(modelId);
   }
 
@@ -210,11 +213,11 @@ export class MaiaAdminController {
    * Grant or revoke user access
    * Matches C# MAIAModelsController.ManageUserAccess()
    */
-  @Post('models/:modelId/access')
+  @Post("models/:modelId/access")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Grant or revoke user access to a model' })
+  @ApiOperation({ summary: "Grant or revoke user access to a model" })
   async manageUserAccess(
-    @Param('modelId') modelId: string,
+    @Param("modelId") modelId: string,
     @Body() body: { userId: string; grantAccess: boolean },
     @CurrentUser() user: User,
   ) {
@@ -234,51 +237,49 @@ export class MaiaAdminController {
    * GET /api/admin/maia/options
    * Get enum options for dropdowns
    */
-  @Get('options')
-  @ApiOperation({ summary: 'Get MAIA enum options for forms' })
+  @Get("options")
+  @ApiOperation({ summary: "Get MAIA enum options for forms" })
   getOptions() {
     return {
       categories: [
-        { value: 0, label: 'Balanced', dbValue: 'balanced' },
-        { value: 1, label: 'Thinking', dbValue: 'thinking' },
-        { value: 2, label: 'Live', dbValue: 'live' },
+        { value: 0, label: "Balanced", dbValue: "balanced" },
+        { value: 1, label: "Thinking", dbValue: "thinking" },
+        { value: 2, label: "Live", dbValue: "live" },
       ],
       providers: [
-        { value: 1, label: 'Google Cloud', dbValue: 'gcloud' },
-        { value: 2, label: 'OpenAI', dbValue: 'openai' },
-        { value: 3, label: 'Self-Hosted', dbValue: 'self' },
+        { value: 1, label: "Google Cloud", dbValue: "gcloud" },
+        { value: 2, label: "OpenAI", dbValue: "openai" },
+        { value: 3, label: "Self-Hosted", dbValue: "self" },
       ],
-      hostProviders: [
-        { value: 1, label: 'AWS EC2', dbValue: 'aws_ec2' },
-      ],
+      hostProviders: [{ value: 1, label: "AWS EC2", dbValue: "aws_ec2" }],
     };
   }
 
   // Helper methods for enum mapping
   private mapModelCategory(category: number): string {
     const map: Record<number, string> = {
-      0: 'balanced',
-      1: 'thinking',
-      2: 'live',
+      0: "balanced",
+      1: "thinking",
+      2: "live",
     };
-    return map[category] ?? 'balanced';
+    return map[category] ?? "balanced";
   }
 
   private mapProvider(provider: number): string {
     const map: Record<number, string> = {
-      0: 'invalid',
-      1: 'gcloud',
-      2: 'openai',
-      3: 'self',
+      0: "invalid",
+      1: "gcloud",
+      2: "openai",
+      3: "self",
     };
-    return map[provider] ?? 'invalid';
+    return map[provider] ?? "invalid";
   }
 
   private mapHostProvider(provider: number): string {
     const map: Record<number, string> = {
-      0: 'invalid',
-      1: 'aws_ec2',
+      0: "invalid",
+      1: "aws_ec2",
     };
-    return map[provider] ?? 'invalid';
+    return map[provider] ?? "invalid";
   }
 }

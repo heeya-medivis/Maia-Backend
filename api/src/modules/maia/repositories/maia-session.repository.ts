@@ -1,6 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, sql, desc } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, sql, desc } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
 import {
   maiaSessions,
   maiaSessionTurns,
@@ -8,7 +8,7 @@ import {
   NewMaiaSessionTurn,
   MaiaSession,
   MaiaSessionTurn,
-} from '../../../database/schema';
+} from "../../../database/schema";
 
 @Injectable()
 export class MaiaSessionRepository {

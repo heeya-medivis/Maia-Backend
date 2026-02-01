@@ -1,8 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, not } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { userMaiaAccess, users } from '../../../database/schema';
-import { nanoid } from 'nanoid';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { userMaiaAccess, users } from "../../../database/schema";
+import { nanoid } from "nanoid";
 
 export type UserMaiaAccessRecord = typeof userMaiaAccess.$inferSelect;
 export type NewUserMaiaAccess = typeof userMaiaAccess.$inferInsert;
@@ -83,9 +83,8 @@ export class UserMaiaAccessRepository {
       .filter((u) => !activeUserIds.includes(u.id))
       .map((u) => ({
         id: u.id,
-        name: u.firstName && u.lastName
-          ? `${u.firstName} ${u.lastName}`
-          : u.email,
+        name:
+          u.firstName && u.lastName ? `${u.firstName} ${u.lastName}` : u.email,
         email: u.email,
       }));
   }
@@ -115,14 +114,15 @@ export class UserMaiaAccessRepository {
     return accessRecords.map((r) => ({
       accessId: r.accessId,
       userId: r.userId,
-      name: r.firstName && r.lastName
-        ? `${r.firstName} ${r.lastName}`
-        : r.email,
+      name:
+        r.firstName && r.lastName ? `${r.firstName} ${r.lastName}` : r.email,
       email: r.email,
     }));
   }
 
-  async create(data: Omit<NewUserMaiaAccess, 'id'>): Promise<UserMaiaAccessRecord> {
+  async create(
+    data: Omit<NewUserMaiaAccess, "id">,
+  ): Promise<UserMaiaAccessRecord> {
     const [access] = await this.db
       .insert(userMaiaAccess)
       .values({
@@ -205,7 +205,10 @@ export class UserMaiaAccessRepository {
    * Deactivate all user access for a model
    * Used when deleting a model to cascade the deactivation
    */
-  async deactivateByModelId(maiaModelId: string, updatedById?: string): Promise<void> {
+  async deactivateByModelId(
+    maiaModelId: string,
+    updatedById?: string,
+  ): Promise<void> {
     await this.db
       .update(userMaiaAccess)
       .set({

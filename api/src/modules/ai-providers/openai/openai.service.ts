@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 export interface OpenAIAuthResponse {
   apiKey: string;
@@ -16,13 +16,13 @@ export class OpenAIService {
    * Matches C# OpenAIAPIController.Auth()
    */
   getAuthData(): OpenAIAuthResponse {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    const apiKey = this.configService.get<string>("OPENAI_API_KEY");
 
     return {
       apiKey: apiKey!,
       // Use Responses API for o1/o3 reasoning models
-      requestUrl: 'https://api.openai.com/v1/responses',
-      webSocketBaseUrl: 'wss://api.openai.com/v1/realtime',
+      requestUrl: "https://api.openai.com/v1/responses",
+      webSocketBaseUrl: "wss://api.openai.com/v1/realtime",
     };
   }
 }

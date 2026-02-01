@@ -1,21 +1,21 @@
-import { IsString, IsOptional, IsEnum, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsEnum, MinLength } from "class-validator";
 
 export enum DeviceType {
-  Desktop = 'desktop',
-  XR = 'xr',
-  Mobile = 'mobile',
-  Web = 'web',
+  Desktop = "desktop",
+  XR = "xr",
+  Mobile = "mobile",
+  Web = "web",
 }
 
 export enum Platform {
-  Windows = 'windows',
-  MacOS = 'macos',
-  Linux = 'linux',
-  iOS = 'ios',
-  Android = 'android',
-  Quest = 'quest',
-  VisionPro = 'visionpro',
-  Web = 'web',
+  Windows = "windows",
+  MacOS = "macos",
+  Linux = "linux",
+  iOS = "ios",
+  Android = "android",
+  Quest = "quest",
+  VisionPro = "visionpro",
+  Web = "web",
 }
 
 export class DeviceInfoDto {

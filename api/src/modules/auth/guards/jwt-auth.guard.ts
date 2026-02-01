@@ -4,14 +4,14 @@ import {
   ExecutionContext,
   Logger,
   Inject,
-} from '@nestjs/common';
-import { Request } from 'express';
-import { UnauthorizedException } from '../../../common/exceptions';
-import { type AuthUser } from '../../../common';
-import { SessionService } from '../services/session.service';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { users } from '../../../database/schema';
-import { eq, isNull, and } from 'drizzle-orm';
+} from "@nestjs/common";
+import { Request } from "express";
+import { UnauthorizedException } from "../../../common/exceptions";
+import { type AuthUser } from "../../../common";
+import { SessionService } from "../services/session.service";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { users } from "../../../database/schema";
+import { eq, isNull, and } from "drizzle-orm";
 
 /**
  * Guard that validates our own JWT access tokens.
@@ -35,13 +35,13 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
-    const deviceId = request.headers['x-device-id'] as string;
+    const deviceId = request.headers["x-device-id"] as string;
 
     if (!token) {
-      this.logger.warn('Missing authorization token');
+      this.logger.warn("Missing authorization token");
       throw new UnauthorizedException(
-        'Missing authorization token',
-        'TOKEN_MISSING',
+        "Missing authorization token",
+        "TOKEN_MISSING",
       );
     }
 
@@ -53,7 +53,7 @@ export class JwtAuthGuard implements CanActivate {
       const isValid = await this.sessionService.validateSession(payload.sid);
       if (!isValid) {
         this.logger.warn(`Session ${payload.sid} is revoked or invalid`);
-        throw new UnauthorizedException('Session revoked', 'SESSION_REVOKED');
+        throw new UnauthorizedException("Session revoked", "SESSION_REVOKED");
       }
 
       // Optionally verify device ID matches
@@ -61,7 +61,7 @@ export class JwtAuthGuard implements CanActivate {
         this.logger.warn(
           `Device ID mismatch: header=${deviceId}, token=${payload.did}`,
         );
-        throw new UnauthorizedException('Device mismatch', 'DEVICE_MISMATCH');
+        throw new UnauthorizedException("Device mismatch", "DEVICE_MISMATCH");
       }
 
       // Fetch full user from database
@@ -73,7 +73,7 @@ export class JwtAuthGuard implements CanActivate {
 
       if (!user) {
         this.logger.warn(`User not found: ${payload.sub}`);
-        throw new UnauthorizedException('User not found', 'USER_NOT_FOUND');
+        throw new UnauthorizedException("User not found", "USER_NOT_FOUND");
       }
 
       // Build AuthUser object
@@ -100,12 +100,12 @@ export class JwtAuthGuard implements CanActivate {
         throw error;
       }
       this.logger.warn(`Token verification failed: ${error.message}`);
-      throw new UnauthorizedException('Invalid token', 'TOKEN_INVALID');
+      throw new UnauthorizedException("Invalid token", "TOKEN_INVALID");
     }
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+    const [type, token] = request.headers.authorization?.split(" ") ?? [];
+    return type === "Bearer" ? token : undefined;
   }
 }

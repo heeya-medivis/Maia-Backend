@@ -6,33 +6,36 @@ import {
   UseGuards,
   Req,
   Logger,
-} from '@nestjs/common';
-import { Request } from 'express';
-import { SessionService } from '../services/session.service';
-import { DevicesRepository } from '../repositories/devices.repository';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { CurrentUser } from '../decorators/current-user.decorator';
-import { CurrentSession, SessionInfo } from '../decorators/current-session.decorator';
-import { User } from '../../../database/schema';
+} from "@nestjs/common";
+import { Request } from "express";
+import { SessionService } from "../services/session.service";
+import { DevicesRepository } from "../repositories/devices.repository";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+import { CurrentUser } from "../decorators/current-user.decorator";
+import {
+  CurrentSession,
+  SessionInfo,
+} from "../decorators/current-session.decorator";
+import { User } from "../../../database/schema";
 import {
   RefreshTokenDto,
   TokenResponseDto,
   MeResponseDto,
-} from '../dto/auth.dto';
+} from "../dto/auth.dto";
 
 /**
  * Auth Controller
- * 
+ *
  * Handles session management for authenticated users.
  * The main OAuth 2.0 + PKCE flow is handled by OAuthController.
- * 
+ *
  * Endpoints:
  * - GET /v1/auth/me - Get current user info
  * - POST /v1/auth/refresh - Refresh expired tokens
  * - POST /v1/auth/logout - Invalidate current session
  * - POST /v1/auth/logout-all - Invalidate all user sessions
  */
-@Controller('v1/auth')
+@Controller("v1/auth")
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
@@ -45,15 +48,17 @@ export class AuthController {
    * POST /auth/refresh
    * Refresh expired tokens
    */
-  @Post('refresh')
+  @Post("refresh")
   async refresh(
     @Body() dto: RefreshTokenDto,
     @Req() req: Request,
   ): Promise<TokenResponseDto> {
     const tokens = await this.sessionService.refreshSession({
       refreshToken: dto.refreshToken,
-      ipAddress: req.headers['x-forwarded-for'] as string ?? req.headers['cf-connecting-ip'] as string,
-      userAgent: req.headers['user-agent'] as string,
+      ipAddress:
+        (req.headers["x-forwarded-for"] as string) ??
+        (req.headers["cf-connecting-ip"] as string),
+      userAgent: req.headers["user-agent"] as string,
     });
 
     return {
@@ -69,13 +74,15 @@ export class AuthController {
    * GET /v1/auth/me
    * Get current user info
    */
-  @Get('me')
+  @Get("me")
   @UseGuards(JwtAuthGuard)
   async me(
     @CurrentUser() user: User,
     @CurrentSession() session: SessionInfo,
   ): Promise<MeResponseDto> {
-    const userDevices = await this.devicesRepository.findActiveByUserId(user.id);
+    const userDevices = await this.devicesRepository.findActiveByUserId(
+      user.id,
+    );
 
     return {
       user: {
@@ -103,18 +110,20 @@ export class AuthController {
    * POST /auth/logout
    * Invalidate current session
    */
-  @Post('logout')
+  @Post("logout")
   @UseGuards(JwtAuthGuard)
   async logout(
     @CurrentUser() user: User,
     @CurrentSession() session: SessionInfo,
   ) {
-    this.logger.log(`[auth/logout] Revoking session ${session.sessionId} for user ${user.id}`);
+    this.logger.log(
+      `[auth/logout] Revoking session ${session.sessionId} for user ${user.id}`,
+    );
     await this.sessionService.revokeSession(session.sessionId);
 
     return {
       success: true,
-      message: 'Logged out successfully',
+      message: "Logged out successfully",
     };
   }
 
@@ -122,10 +131,12 @@ export class AuthController {
    * POST /auth/logout-all
    * Invalidate all sessions for user
    */
-  @Post('logout-all')
+  @Post("logout-all")
   @UseGuards(JwtAuthGuard)
   async logoutAll(@CurrentUser() user: User) {
-    this.logger.log(`[auth/logout-all] Revoking all sessions for user ${user.id}`);
+    this.logger.log(
+      `[auth/logout-all] Revoking all sessions for user ${user.id}`,
+    );
     const count = await this.sessionService.revokeAllUserSessions(user.id);
     this.logger.log(`[auth/logout-all] Revoked ${count} sessions`);
 

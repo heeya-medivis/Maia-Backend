@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { MaiaModelsRepository } from '../repositories/maia-models.repository';
-import { MaiaHostsRepository } from '../repositories/maia-hosts.repository';
-import { MaiaPromptsRepository } from '../repositories/maia-prompts.repository';
-import { UserMaiaAccessRepository } from '../repositories/user-maia-access.repository';
-import { MaiaModelResponseDto, Provider, HostProvider } from '../dto';
-import { NotFoundException, BadRequestException } from '../../../common/exceptions';
-import { MaiaModel, NewMaiaModel, HostProvider as DbHostProvider } from '../../../database/schema';
+import { Injectable } from "@nestjs/common";
+import { MaiaModelsRepository } from "../repositories/maia-models.repository";
+import { MaiaHostsRepository } from "../repositories/maia-hosts.repository";
+import { MaiaPromptsRepository } from "../repositories/maia-prompts.repository";
+import { UserMaiaAccessRepository } from "../repositories/user-maia-access.repository";
+import { MaiaModelResponseDto } from "../dto";
+import {
+  NotFoundException,
+  BadRequestException,
+} from "../../../common/exceptions";
+import {
+  MaiaModel,
+  HostProvider as DbHostProvider,
+} from "../../../database/schema";
 
 @Injectable()
 export class MaiaModelsService {
@@ -23,7 +29,7 @@ export class MaiaModelsService {
   async findById(id: string): Promise<MaiaModel> {
     const model = await this.modelsRepository.findById(id);
     if (!model) {
-      throw new NotFoundException('Model not found', 'MODEL_NOT_FOUND');
+      throw new NotFoundException("Model not found", "MODEL_NOT_FOUND");
     }
     return model;
   }
@@ -31,7 +37,7 @@ export class MaiaModelsService {
   async findByIdWithRelations(id: string) {
     const model = await this.modelsRepository.findByIdWithRelations(id);
     if (!model) {
-      throw new NotFoundException('Model not found', 'MODEL_NOT_FOUND');
+      throw new NotFoundException("Model not found", "MODEL_NOT_FOUND");
     }
     return model;
   }
@@ -49,10 +55,10 @@ export class MaiaModelsService {
       // Get prompts for this model
       const prompts = await this.promptsRepository.findByModelId(model.id);
       const systemPrompt = prompts.find(
-        (p) => p.isActive && p.type === 'system_prompt',
+        (p) => p.isActive && p.type === "system_prompt",
       );
       const analysisPrompt = prompts.find(
-        (p) => p.isActive && p.type === 'analysis_prompt',
+        (p) => p.isActive && p.type === "analysis_prompt",
       );
 
       // Get host for this model
@@ -97,13 +103,13 @@ export class MaiaModelsService {
     let serverIp = data.serverIp?.trim() || null;
     let hostProvider = data.hostProvider;
 
-    if (data.provider !== 'self') {
+    if (data.provider !== "self") {
       serverIp = null;
       hostProvider = undefined;
-    } else if (serverIp && (!hostProvider || hostProvider === 'invalid')) {
+    } else if (serverIp && (!hostProvider || hostProvider === "invalid")) {
       throw new BadRequestException(
-        'Please select a hosting provider when providing a Public IP address.',
-        'HOST_PROVIDER_REQUIRED',
+        "Please select a hosting provider when providing a Public IP address.",
+        "HOST_PROVIDER_REQUIRED",
       );
     }
 
@@ -152,19 +158,19 @@ export class MaiaModelsService {
   ): Promise<MaiaModel> {
     const existingModel = await this.modelsRepository.findById(id);
     if (!existingModel) {
-      throw new NotFoundException('Model not found', 'MODEL_NOT_FOUND');
+      throw new NotFoundException("Model not found", "MODEL_NOT_FOUND");
     }
 
     // Only allow host info for self-hosted models
     let serverIp = data.serverIp?.trim() || null;
-    let hostProvider = data.hostProvider;
+    const hostProvider = data.hostProvider;
 
-    if (data.provider !== 'self') {
+    if (data.provider !== "self") {
       serverIp = null;
-    } else if (serverIp && (!hostProvider || hostProvider === 'invalid')) {
+    } else if (serverIp && (!hostProvider || hostProvider === "invalid")) {
       throw new BadRequestException(
-        'Please select a hosting provider when providing a Public IP address.',
-        'HOST_PROVIDER_REQUIRED',
+        "Please select a hosting provider when providing a Public IP address.",
+        "HOST_PROVIDER_REQUIRED",
       );
     }
 
@@ -183,7 +189,8 @@ export class MaiaModelsService {
     );
 
     // Handle host updates (matching C# logic)
-    const existingHost = await this.hostsRepository.findByModelIdIncludeDeleted(id);
+    const existingHost =
+      await this.hostsRepository.findByModelIdIncludeDeleted(id);
 
     if (serverIp) {
       if (!existingHost) {
@@ -194,7 +201,10 @@ export class MaiaModelsService {
           createdById: modifiedById,
         });
       } else {
-        if (existingHost.serverIp !== serverIp || existingHost.hostProvider !== hostProvider) {
+        if (
+          existingHost.serverIp !== serverIp ||
+          existingHost.hostProvider !== hostProvider
+        ) {
           await this.hostsRepository.update(existingHost.id, {
             serverIp,
             hostProvider: hostProvider as DbHostProvider,
@@ -226,24 +236,29 @@ export class MaiaModelsService {
     const model = await this.modelsRepository.findByName(modelName);
 
     if (!model) {
-      throw new BadRequestException('Model not found', 'MODEL_NOT_FOUND');
+      throw new BadRequestException("Model not found", "MODEL_NOT_FOUND");
     }
 
-    if (model.provider !== 'self') {
+    if (model.provider !== "self") {
       throw new BadRequestException(
-        'Not a self-hosted model. Confirm the model name or provider in the web server.',
-        'NOT_SELF_HOSTED',
+        "Not a self-hosted model. Confirm the model name or provider in the web server.",
+        "NOT_SELF_HOSTED",
       );
     }
 
     const hostProvider = data.hostProvider?.toLowerCase() as DbHostProvider;
-    if (!hostProvider || hostProvider === 'invalid') {
-      throw new BadRequestException('Invalid host provider.', 'INVALID_HOST_PROVIDER');
+    if (!hostProvider || hostProvider === "invalid") {
+      throw new BadRequestException(
+        "Invalid host provider.",
+        "INVALID_HOST_PROVIDER",
+      );
     }
 
     await this.modelsRepository.update(model.id, { isActive: data.isActive });
 
-    const existingHost = await this.hostsRepository.findByModelIdIncludeDeleted(model.id);
+    const existingHost = await this.hostsRepository.findByModelIdIncludeDeleted(
+      model.id,
+    );
 
     if (data.isActive) {
       if (!existingHost) {
@@ -264,27 +279,27 @@ export class MaiaModelsService {
         }
       }
     } else if (existingHost) {
-      await this.hostsRepository.softDelete(existingHost.id, '');
+      await this.hostsRepository.softDelete(existingHost.id, "");
     }
 
     return {
-      message: `Model '${modelName}' has been ${data.isActive ? 'activated' : 'deactivated'}.`,
+      message: `Model '${modelName}' has been ${data.isActive ? "activated" : "deactivated"}.`,
     };
   }
 
   async softDelete(id: string, deletedById?: string): Promise<void> {
     const model = await this.modelsRepository.findById(id);
     if (!model) {
-      throw new NotFoundException('Model not found', 'MODEL_NOT_FOUND');
+      throw new NotFoundException("Model not found", "MODEL_NOT_FOUND");
     }
 
     // Soft delete the model
-    await this.modelsRepository.softDelete(id, deletedById ?? '');
+    await this.modelsRepository.softDelete(id, deletedById ?? "");
 
     // Cascade: soft delete the host
     const host = await this.hostsRepository.findByModelId(id);
     if (host) {
-      await this.hostsRepository.softDelete(host.id, deletedById ?? '');
+      await this.hostsRepository.softDelete(host.id, deletedById ?? "");
     }
 
     // Cascade: soft delete all prompts for this model
@@ -296,12 +311,12 @@ export class MaiaModelsService {
 
   private mapProviderToEndpoint(provider: string): string {
     switch (provider) {
-      case 'gcloud':
-        return 'GCloud';
-      case 'openai':
-        return 'OpenAI';
-      case 'self':
-        return 'SELF';
+      case "gcloud":
+        return "GCloud";
+      case "openai":
+        return "OpenAI";
+      case "self":
+        return "SELF";
       default:
         return provider;
     }

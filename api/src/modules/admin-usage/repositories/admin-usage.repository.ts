@@ -1,12 +1,8 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { sql, eq, gte, lt, and, desc } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import {
-  users,
-  maiaSessions,
-  MaiaSession,
-} from '../../../database/schema';
-import { inArray } from 'drizzle-orm';
+import { Injectable, Inject } from "@nestjs/common";
+import { sql, eq, gte, lt, and, desc } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { users, maiaSessions, MaiaSession } from "../../../database/schema";
+import { inArray } from "drizzle-orm";
 
 export interface UserUsageStats {
   userId: string;
@@ -71,7 +67,10 @@ export class AdminUsageRepository {
   /**
    * Get overall usage stats
    */
-  async getOverallStats(startDate?: Date, endDate?: Date): Promise<OverallStats> {
+  async getOverallStats(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<OverallStats> {
     // Get user and org counts
     const userStats = await this.db
       .select({
@@ -96,7 +95,12 @@ export class AdminUsageRepository {
       .from(maiaSessions)
       .where(chatConditions.length > 0 ? and(...chatConditions) : undefined);
 
-    const chatData = chatStats[0] || { totalSessions: 0, activeSessions: 0, inputTokens: 0, outputTokens: 0 };
+    const chatData = chatStats[0] || {
+      totalSessions: 0,
+      activeSessions: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    };
     const userData = userStats[0] || { totalUsers: 0, totalOrganizations: 0 };
 
     return {
@@ -113,7 +117,10 @@ export class AdminUsageRepository {
   /**
    * Get usage stats grouped by user
    */
-  async getUsageByUser(startDate?: Date, endDate?: Date): Promise<UserUsageStats[]> {
+  async getUsageByUser(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<UserUsageStats[]> {
     // Build date conditions for chat sessions
     const chatConditions = [];
     if (startDate) chatConditions.push(gte(maiaSessions.startTime, startDate));
@@ -144,11 +151,15 @@ export class AdminUsageRepository {
       .where(sql`${users.deletedAt} is null`);
 
     // Build lookup map
-    const chatMap = new Map(chatStatsByUser.map(s => [s.userId, s]));
+    const chatMap = new Map(chatStatsByUser.map((s) => [s.userId, s]));
 
     // Combine data
-    const results: UserUsageStats[] = allUsers.map(user => {
-      const chat = chatMap.get(user.id) || { sessionCount: 0, inputTokens: 0, outputTokens: 0 };
+    const results: UserUsageStats[] = allUsers.map((user) => {
+      const chat = chatMap.get(user.id) || {
+        sessionCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+      };
 
       return {
         userId: user.id,
@@ -170,7 +181,10 @@ export class AdminUsageRepository {
   /**
    * Get usage stats grouped by organization
    */
-  async getUsageByOrganization(startDate?: Date, endDate?: Date): Promise<OrganizationUsageStats[]> {
+  async getUsageByOrganization(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<OrganizationUsageStats[]> {
     // Build date conditions for chat sessions
     const chatConditions = [];
     if (startDate) chatConditions.push(gte(maiaSessions.startTime, startDate));
@@ -189,7 +203,12 @@ export class AdminUsageRepository {
       })
       .from(maiaSessions)
       .innerJoin(users, eq(maiaSessions.userId, users.id))
-      .where(and(hasOrgCondition, ...(chatConditions.length > 0 ? chatConditions : [])))
+      .where(
+        and(
+          hasOrgCondition,
+          ...(chatConditions.length > 0 ? chatConditions : []),
+        ),
+      )
       .groupBy(users.organization);
 
     // Get user count per organization (only users with an organization)
@@ -203,18 +222,28 @@ export class AdminUsageRepository {
       .groupBy(users.organization);
 
     // Build lookup maps (organization is guaranteed to be non-null now)
-    const chatMap = new Map(chatStatsByOrg.map(s => [s.organization!, s]));
-    const userCountMap = new Map(userCountByOrg.map(s => [s.organization!, s.userCount]));
+    const chatMap = new Map(chatStatsByOrg.map((s) => [s.organization!, s]));
+    const userCountMap = new Map(
+      userCountByOrg.map((s) => [s.organization!, s.userCount]),
+    );
 
     // Get all unique organizations (filter out any remaining nulls just in case)
     const allOrgs = new Set([
-      ...chatStatsByOrg.map(s => s.organization).filter((o): o is string => o !== null),
-      ...userCountByOrg.map(s => s.organization).filter((o): o is string => o !== null),
+      ...chatStatsByOrg
+        .map((s) => s.organization)
+        .filter((o): o is string => o !== null),
+      ...userCountByOrg
+        .map((s) => s.organization)
+        .filter((o): o is string => o !== null),
     ]);
 
     // Combine data
-    const results: OrganizationUsageStats[] = Array.from(allOrgs).map(org => {
-      const chat = chatMap.get(org) || { sessionCount: 0, inputTokens: 0, outputTokens: 0 };
+    const results: OrganizationUsageStats[] = Array.from(allOrgs).map((org) => {
+      const chat = chatMap.get(org) || {
+        sessionCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+      };
       const userCount = userCountMap.get(org) || 0;
 
       return {
@@ -270,9 +299,11 @@ export class AdminUsageRepository {
   /**
    * Get detailed usage data for a specific organization
    */
-  async getOrganizationDetail(organizationName: string): Promise<OrganizationDetailData | null> {
+  async getOrganizationDetail(
+    organizationName: string,
+  ): Promise<OrganizationDetailData | null> {
     // Users without an organization are not shown in the organization view
-    if (organizationName === 'No Organization') {
+    if (organizationName === "No Organization") {
       return null;
     }
 
@@ -285,13 +316,18 @@ export class AdminUsageRepository {
         lastName: users.lastName,
       })
       .from(users)
-      .where(and(eq(users.organization, organizationName), sql`${users.deletedAt} is null`));
+      .where(
+        and(
+          eq(users.organization, organizationName),
+          sql`${users.deletedAt} is null`,
+        ),
+      );
 
     if (orgUsers.length === 0) {
       return null;
     }
 
-    const userIds = orgUsers.map(u => u.id);
+    const userIds = orgUsers.map((u) => u.id);
 
     // Get chat sessions for all users in this organization
     const chatSessions = await this.db

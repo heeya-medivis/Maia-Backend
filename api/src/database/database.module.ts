@@ -1,6 +1,6 @@
-import { Module, Global } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createDatabase, DATABASE_CONNECTION } from './database.provider';
+import { Module, Global } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { createDatabase, DATABASE_CONNECTION } from "./database.provider";
 
 @Global()
 @Module({
@@ -8,7 +8,7 @@ import { createDatabase, DATABASE_CONNECTION } from './database.provider';
     {
       provide: DATABASE_CONNECTION,
       useFactory: (configService: ConfigService) => {
-        const databaseUrl = configService.getOrThrow<string>('DATABASE_URL');
+        const databaseUrl = configService.getOrThrow<string>("DATABASE_URL");
         return createDatabase(databaseUrl);
       },
       inject: [ConfigService],

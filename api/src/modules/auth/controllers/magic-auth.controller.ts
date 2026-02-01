@@ -6,17 +6,18 @@ import {
   Logger,
   Inject,
   Req,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
-import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
-import { WorkOSService } from '../services/workos.service';
-import { SessionService } from '../services/session.service';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { users, oauthAuthorizationCodes } from '../../../database/schema';
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Request } from "express";
+import { nanoid } from "nanoid";
+import { eq } from "drizzle-orm";
+import { WorkOSService } from "../services/workos.service";
+import { SessionService } from "../services/session.service";
+import { UsersService } from "../../users/users.service";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { users, oauthAuthorizationCodes } from "../../../database/schema";
 
-const AUTH_CODE_TTL_MS = 5 * 60 * 1000; // 10 minutes
+const AUTH_CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface MagicAuthRequestDto {
   email: string;
@@ -28,7 +29,7 @@ interface MagicAuthVerifyDto {
   code: string;
   clientId?: string;
   codeChallenge?: string;
-  codeChallengeMethod?: 'S256';
+  codeChallengeMethod?: "S256";
   deviceId?: string;
   devicePlatform?: string;
   redirectUri?: string;
@@ -36,15 +37,15 @@ interface MagicAuthVerifyDto {
 
 /**
  * Magic Auth Controller
- * 
+ *
  * Handles passwordless authentication via 6-digit email codes.
  * Flow:
  * 1. POST /v1/auth/magic-auth - Request code to be sent to email
  * 2. POST /v1/auth/magic-auth/verify - Verify code and get tokens/auth code
- * 
+ *
  * @see https://workos.com/docs/reference/authkit/magic-auth
  */
-@Controller('v1/auth/magic-auth')
+@Controller("v1/auth/magic-auth")
 export class MagicAuthController {
   private readonly logger = new Logger(MagicAuthController.name);
   private readonly allowedClientIds: string[];
@@ -52,11 +53,15 @@ export class MagicAuthController {
   constructor(
     private readonly workosService: WorkOSService,
     private readonly sessionService: SessionService,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     @Inject(DATABASE_CONNECTION)
     private readonly db: Database,
   ) {
-    this.allowedClientIds = this.configService.get<string[]>('ALLOWED_CLIENT_IDS', ['maia-web', 'maia_desktop']);
+    this.allowedClientIds = this.configService.get<string[]>(
+      "ALLOWED_CLIENT_IDS",
+      ["maia-web", "maia_desktop"],
+    );
   }
 
   /**
@@ -69,13 +74,13 @@ export class MagicAuthController {
   ): Promise<{ success: boolean; message: string }> {
     const { email, clientId } = body;
 
-    if (!email || !email.includes('@')) {
-      throw new BadRequestException('Valid email address is required');
+    if (!email || !email.includes("@")) {
+      throw new BadRequestException("Valid email address is required");
     }
 
     // Validate client_id if provided
     if (clientId && !this.allowedClientIds.includes(clientId)) {
-      throw new BadRequestException('Invalid client_id');
+      throw new BadRequestException("Invalid client_id");
     }
 
     try {
@@ -87,11 +92,16 @@ export class MagicAuthController {
 
       return {
         success: true,
-        message: 'Verification code sent to your email',
+        message: "Verification code sent to your email",
       };
     } catch (error) {
-      this.logger.error(`Failed to send magic auth code: ${error.message}`, error.stack);
-      throw new BadRequestException('Failed to send verification code. Please try again.');
+      this.logger.error(
+        `Failed to send magic auth code: ${error.message}`,
+        error.stack,
+      );
+      throw new BadRequestException(
+        "Failed to send verification code. Please try again.",
+      );
     }
   }
 
@@ -99,17 +109,20 @@ export class MagicAuthController {
    * POST /v1/auth/magic-auth/verify
    * Verify the 6-digit code and return tokens
    */
-  @Post('verify')
+  @Post("verify")
   async verifyMagicAuth(
     @Body() body: MagicAuthVerifyDto,
     @Req() req: Request,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: string;
-  } | {
-    code: string;
-  }> {
+  ): Promise<
+    | {
+        accessToken: string;
+        refreshToken: string;
+        expiresAt: string;
+      }
+    | {
+        code: string;
+      }
+  > {
     const {
       email,
       code,
@@ -122,25 +135,29 @@ export class MagicAuthController {
     } = body;
 
     if (!email || !code) {
-      throw new BadRequestException('Email and code are required');
+      throw new BadRequestException("Email and code are required");
     }
 
     // Validate code format (6 digits)
     if (!/^\d{6}$/.test(code)) {
-      throw new BadRequestException('Invalid code format. Please enter the 6-digit code.');
+      throw new BadRequestException(
+        "Invalid code format. Please enter the 6-digit code.",
+      );
     }
 
     // For Unity clients, require PKCE parameters
-    const isUnityClient = clientId === 'maia_desktop';
-    if (isUnityClient && (!codeChallenge || codeChallengeMethod !== 'S256')) {
-      throw new BadRequestException('PKCE code_challenge required for desktop clients');
+    const isUnityClient = clientId === "maia_desktop";
+    if (isUnityClient && (!codeChallenge || codeChallengeMethod !== "S256")) {
+      throw new BadRequestException(
+        "PKCE code_challenge required for desktop clients",
+      );
     }
 
     try {
       // Verify the code with WorkOS
-      const ipAddress = req.headers['x-forwarded-for'] as string ?? req.ip;
-      const userAgent = req.headers['user-agent'];
-      
+      const ipAddress = (req.headers["x-forwarded-for"] as string) ?? req.ip;
+      const userAgent = req.headers["user-agent"];
+
       const result = await this.workosService.authenticateWithMagicAuth(
         email,
         code,
@@ -153,22 +170,24 @@ export class MagicAuthController {
 
       // Find or create user in our database
       let user = await this.findUserByEmail(workosUser.email);
-      
+
       if (!user) {
         user = await this.createUser({
           email: workosUser.email,
-          firstName: workosUser.firstName || '',
-          lastName: workosUser.lastName || '',
+          firstName: workosUser.firstName || "",
+          lastName: workosUser.lastName || "",
         });
         this.logger.log(`Created new user from magic auth: ${user.id}`);
       }
 
       // Update last login timestamp
-      const isWebLogin = devicePlatform === 'web' || !devicePlatform;
+      const isWebLogin = devicePlatform === "web" || !devicePlatform;
       await this.db
         .update(users)
         .set({
-          ...(isWebLogin ? { lastLoginWeb: new Date() } : { lastLoginApp: new Date() }),
+          ...(isWebLogin
+            ? { lastLoginWeb: new Date() }
+            : { lastLoginApp: new Date() }),
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
@@ -176,21 +195,23 @@ export class MagicAuthController {
       if (isUnityClient) {
         // Generate authorization code for Unity to exchange via PKCE
         const authCode = nanoid(32);
-        
+
         await this.db.insert(oauthAuthorizationCodes).values({
           id: authCode,
           userId: user.id,
-          clientId: clientId || 'maia_desktop',
-          redirectUri: redirectUri || '',
+          clientId: clientId || "maia_desktop",
+          redirectUri: redirectUri || "",
           codeChallenge: codeChallenge!,
-          codeChallengeMethod: 'S256',
+          codeChallengeMethod: "S256",
           deviceId: deviceId ?? null,
           devicePlatform: devicePlatform ?? null,
-          authMethod: 'workos_magic_link',
+          authMethod: "workos_magic_link",
           expiresAt: new Date(Date.now() + AUTH_CODE_TTL_MS),
         });
 
-        this.logger.log(`Generated auth code for Unity client, user: ${user.id}`);
+        this.logger.log(
+          `Generated auth code for Unity client, user: ${user.id}`,
+        );
 
         return { code: authCode };
       } else {
@@ -199,7 +220,7 @@ export class MagicAuthController {
           userId: user.id,
           deviceId,
           devicePlatform,
-          authMethod: 'workos_magic_link',
+          authMethod: "workos_magic_link",
           ipAddress,
           userAgent,
         });
@@ -213,14 +234,19 @@ export class MagicAuthController {
         };
       }
     } catch (error) {
-      this.logger.error(`Magic auth verification failed: ${error.message}`, error.stack);
-      
-      const errorMsg = error.message?.toLowerCase() ?? '';
-      if (errorMsg.includes('invalid') || errorMsg.includes('expired')) {
-        throw new BadRequestException('Invalid or expired code. Please try again.');
+      this.logger.error(
+        `Magic auth verification failed: ${error.message}`,
+        error.stack,
+      );
+
+      const errorMsg = error.message?.toLowerCase() ?? "";
+      if (errorMsg.includes("invalid") || errorMsg.includes("expired")) {
+        throw new BadRequestException(
+          "Invalid or expired code. Please try again.",
+        );
       }
-      
-      throw new BadRequestException('Verification failed. Please try again.');
+
+      throw new BadRequestException("Verification failed. Please try again.");
     }
   }
 
@@ -235,16 +261,16 @@ export class MagicAuthController {
     return user ?? null;
   }
 
-  private async createUser(data: { email: string; firstName: string; lastName: string }) {
-    const [user] = await this.db
-      .insert(users)
-      .values({
-        id: nanoid(),
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-      })
-      .returning();
-    return user;
+  private async createUser(data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+  }) {
+    return this.usersService.create({
+      id: nanoid(),
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
   }
 }

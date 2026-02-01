@@ -1,9 +1,8 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { nanoid } from 'nanoid';
-import * as crypto from 'crypto';
-import { SessionRepository } from '../repositories/session.repository';
-import { DevicesRepository } from '../repositories/devices.repository';
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { nanoid } from "nanoid";
+import { SessionRepository } from "../repositories/session.repository";
+import { DevicesRepository } from "../repositories/devices.repository";
 import {
   signAccessToken,
   verifyAccessToken as jwtVerifyAccessToken,
@@ -11,9 +10,8 @@ import {
   verifyRefreshToken,
   hashRefreshToken,
   initializeJwt,
-  type AccessTokenClaims,
-} from '../../../utils/jwt';
-import type { AuthProtocol } from '../../../database/schema/auth-connections';
+} from "../../../utils/jwt";
+import type { AuthProtocol } from "../../../database/schema/auth-connections";
 
 export interface CreateSessionInput {
   userId: string;
@@ -56,7 +54,10 @@ export class SessionService {
   ) {
     // Initialize JWT utilities with config service
     initializeJwt(configService);
-    this.refreshTokenTtlSeconds = this.configService.get<number>('REFRESH_TOKEN_TTL_SECONDS', 2592000);
+    this.refreshTokenTtlSeconds = this.configService.get<number>(
+      "REFRESH_TOKEN_TTL_SECONDS",
+      2592000,
+    );
   }
 
   /**
@@ -66,26 +67,33 @@ export class SessionService {
   async createSession(input: CreateSessionInput): Promise<SessionTokens> {
     // Auto-register or update device if deviceId is provided
     if (input.deviceId) {
-      const { platform, deviceType } = this.mapPlatformAndDeviceType(input.devicePlatform);
+      const { platform, deviceType } = this.mapPlatformAndDeviceType(
+        input.devicePlatform,
+      );
       await this.devicesRepository.upsert({
         id: input.deviceId,
         userId: input.userId,
         platform,
         deviceType,
       });
-      this.logger.log(`Device ${input.deviceId} registered/updated for user ${input.userId} (type: ${deviceType}, platform: ${platform})`);
+      this.logger.log(
+        `Device ${input.deviceId} registered/updated for user ${input.userId} (type: ${deviceType}, platform: ${platform})`,
+      );
     }
 
     // Check for existing active session for this user/device and revoke it
     if (input.deviceId) {
-      const existingSession = await this.sessionRepository.findActiveByUserAndDevice(
-        input.userId,
-        input.deviceId,
-      );
+      const existingSession =
+        await this.sessionRepository.findActiveByUserAndDevice(
+          input.userId,
+          input.deviceId,
+        );
 
       if (existingSession) {
-        await this.sessionRepository.revoke(existingSession.id, 'new_session');
-        this.logger.log(`Revoked existing session ${existingSession.id} for device ${input.deviceId}`);
+        await this.sessionRepository.revoke(existingSession.id, "new_session");
+        this.logger.log(
+          `Revoked existing session ${existingSession.id} for device ${input.deviceId}`,
+        );
       }
     }
 
@@ -93,10 +101,15 @@ export class SessionService {
     const familyId = nanoid();
     const refreshToken = generateRefreshToken(sessionId, familyId);
     const refreshTokenHash = hashRefreshToken(refreshToken);
-    
-    const accessTokenTtl = this.configService.get<number>('ACCESS_TOKEN_TTL_SECONDS', 600);
+
+    const accessTokenTtl = this.configService.get<number>(
+      "ACCESS_TOKEN_TTL_SECONDS",
+      600,
+    );
     const expiresAt = new Date(Date.now() + accessTokenTtl * 1000);
-    const refreshExpiresAt = new Date(Date.now() + this.refreshTokenTtlSeconds * 1000);
+    const refreshExpiresAt = new Date(
+      Date.now() + this.refreshTokenTtlSeconds * 1000,
+    );
 
     // Create session in database
     await this.sessionRepository.create({
@@ -136,7 +149,7 @@ export class SessionService {
     // Verify HMAC signature and extract session/family IDs
     const verified = verifyRefreshToken(input.refreshToken);
     if (!verified) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException("Invalid refresh token");
     }
 
     const { sid: sessionId, fid: familyId } = verified;
@@ -144,16 +157,16 @@ export class SessionService {
     const session = await this.sessionRepository.findById(sessionId);
 
     if (!session) {
-      throw new UnauthorizedException('Session not found');
+      throw new UnauthorizedException("Session not found");
     }
 
     if (session.revokedAt !== null) {
-      throw new UnauthorizedException('Session has been revoked');
+      throw new UnauthorizedException("Session has been revoked");
     }
 
     if (session.expiresAt < new Date()) {
-      await this.sessionRepository.revoke(sessionId, 'expired');
-      throw new UnauthorizedException('Refresh token expired');
+      await this.sessionRepository.revoke(sessionId, "expired");
+      throw new UnauthorizedException("Refresh token expired");
     }
 
     // Verify family ID matches to detect token theft
@@ -166,27 +179,36 @@ export class SessionService {
       this.logger.warn(
         `Refresh token family mismatch for session ${sessionId}. Potential token theft detected.`,
       );
-      throw new UnauthorizedException('Refresh token has been revoked due to suspected token theft');
+      throw new UnauthorizedException(
+        "Refresh token has been revoked due to suspected token theft",
+      );
     }
 
     // Verify the token hash matches
     const incomingHash = hashRefreshToken(input.refreshToken);
     if (incomingHash !== session.refreshTokenHash) {
       // Token reuse detected - revoke the session
-      await this.sessionRepository.revoke(sessionId, 'rotation_reuse');
+      await this.sessionRepository.revoke(sessionId, "rotation_reuse");
       this.logger.warn(
         `Refresh token reuse detected for session ${sessionId}. Revoking session.`,
       );
-      throw new UnauthorizedException('Refresh token has been revoked due to reuse');
+      throw new UnauthorizedException(
+        "Refresh token has been revoked due to reuse",
+      );
     }
 
     // Generate new tokens (rotate)
     const newRefreshToken = generateRefreshToken(sessionId, familyId);
     const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
-    
-    const accessTokenTtl = this.configService.get<number>('ACCESS_TOKEN_TTL_SECONDS', 600);
+
+    const accessTokenTtl = this.configService.get<number>(
+      "ACCESS_TOKEN_TTL_SECONDS",
+      600,
+    );
     const expiresAt = new Date(Date.now() + accessTokenTtl * 1000);
-    const refreshExpiresAt = new Date(Date.now() + this.refreshTokenTtlSeconds * 1000);
+    const refreshExpiresAt = new Date(
+      Date.now() + this.refreshTokenTtlSeconds * 1000,
+    );
 
     // Update session with new token hash
     await this.sessionRepository.update(sessionId, {
@@ -217,7 +239,10 @@ export class SessionService {
   /**
    * Revoke a session (logout)
    */
-  async revokeSession(sessionId: string, reason: string = 'logout'): Promise<void> {
+  async revokeSession(
+    sessionId: string,
+    reason: string = "logout",
+  ): Promise<void> {
     await this.sessionRepository.revoke(sessionId, reason);
     this.logger.log(`Revoked session ${sessionId}: ${reason}`);
   }
@@ -249,10 +274,10 @@ export class SessionService {
       return {
         sub: claims.sub,
         sid: claims.sid,
-        did: claims.did ?? '',
+        did: claims.did ?? "",
       };
     } catch (error) {
-      throw new UnauthorizedException('Invalid access token');
+      throw new UnauthorizedException("Invalid access token");
     }
   }
 
@@ -261,7 +286,7 @@ export class SessionService {
    */
   async validateSession(sessionId: string): Promise<boolean> {
     const session = await this.sessionRepository.findById(sessionId);
-    
+
     if (!session || session.revokedAt !== null) {
       return false;
     }
@@ -278,23 +303,26 @@ export class SessionService {
    * Map platform string to database enums for both platform and device type
    */
   private mapPlatformAndDeviceType(platformInput?: string): {
-    platform?: 'windows' | 'macos' | 'web';
-    deviceType?: 'desktop' | 'web';
+    platform?: "windows" | "macos" | "web";
+    deviceType?: "desktop" | "web";
   } {
     if (!platformInput) return {};
-    
+
     const platform = platformInput.toLowerCase();
-    
+
     // Map platform string to database values
-    const mapping: Record<string, { 
-      platform: 'windows' | 'macos' | 'web';
-      deviceType: 'desktop' | 'web';
-    }> = {
-      'windows': { platform: 'windows', deviceType: 'desktop' },
-      'macos': { platform: 'macos', deviceType: 'desktop' },
-      'web': { platform: 'web', deviceType: 'web' },
+    const mapping: Record<
+      string,
+      {
+        platform: "windows" | "macos" | "web";
+        deviceType: "desktop" | "web";
+      }
+    > = {
+      windows: { platform: "windows", deviceType: "desktop" },
+      macos: { platform: "macos", deviceType: "desktop" },
+      web: { platform: "web", deviceType: "web" },
     };
-    
-    return mapping[platform] ?? { platform: undefined, deviceType: 'desktop' };
+
+    return mapping[platform] ?? { platform: undefined, deviceType: "desktop" };
   }
 }

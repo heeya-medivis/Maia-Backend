@@ -1,8 +1,13 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { maiaPrompts, MaiaPrompt, NewMaiaPrompt, PromptType } from '../../../database/schema';
-import { nanoid } from 'nanoid';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import {
+  maiaPrompts,
+  MaiaPrompt,
+  NewMaiaPrompt,
+  PromptType,
+} from "../../../database/schema";
+import { nanoid } from "nanoid";
 
 @Injectable()
 export class MaiaPromptsRepository {
@@ -51,7 +56,7 @@ export class MaiaPromptsRepository {
     return prompt ?? null;
   }
 
-  async create(data: Omit<NewMaiaPrompt, 'id'>): Promise<MaiaPrompt> {
+  async create(data: Omit<NewMaiaPrompt, "id">): Promise<MaiaPrompt> {
     const [prompt] = await this.db
       .insert(maiaPrompts)
       .values({
@@ -124,7 +129,10 @@ export class MaiaPromptsRepository {
    * Soft delete all prompts for a model
    * Used when deleting a model to cascade the deletion
    */
-  async softDeleteByModelId(maiaModelId: string, deletedById?: string): Promise<void> {
+  async softDeleteByModelId(
+    maiaModelId: string,
+    deletedById?: string,
+  ): Promise<void> {
     await this.db
       .update(maiaPrompts)
       .set({

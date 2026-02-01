@@ -1,31 +1,37 @@
-import { Module, Global, OnModuleInit } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AdminGuard } from './guards/admin.guard';
-import { DatabaseModule } from '../../database';
-import { UsersModule } from '../users/users.module';
-import { initializeJwt } from '../../utils/jwt';
+import { Module, Global, OnModuleInit } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { AdminGuard } from "./guards/admin.guard";
+import { DatabaseModule } from "../../database";
+import { UsersModule } from "../users/users.module";
+import { initializeJwt } from "../../utils/jwt";
 
 // Repositories
-import { SessionRepository } from './repositories/session.repository';
-import { DevicesRepository } from './repositories/devices.repository';
-import { SsoRepository } from './repositories/sso.repository';
+import { SessionRepository } from "./repositories/session.repository";
+import { DevicesRepository } from "./repositories/devices.repository";
+import { SsoRepository } from "./repositories/sso.repository";
 
 // Services
-import { SessionService } from './services/session.service';
-import { WorkOSService } from './services/workos.service';
+import { SessionService } from "./services/session.service";
+import { WorkOSService } from "./services/workos.service";
 
 // Controllers
-import { AuthController } from './controllers/auth.controller';
-import { DevicesController } from './controllers/devices.controller';
-import { OAuthController } from './controllers/oauth.controller';
-import { SsoController } from './controllers/sso.controller';
-import { MagicAuthController } from './controllers/magic-auth.controller';
+import { AuthController } from "./controllers/auth.controller";
+import { DevicesController } from "./controllers/devices.controller";
+import { OAuthController } from "./controllers/oauth.controller";
+import { SsoController } from "./controllers/sso.controller";
+import { MagicAuthController } from "./controllers/magic-auth.controller";
 
 @Global()
 @Module({
   imports: [DatabaseModule, ConfigModule, UsersModule],
-  controllers: [AuthController, DevicesController, OAuthController, SsoController, MagicAuthController],
+  controllers: [
+    AuthController,
+    DevicesController,
+    OAuthController,
+    SsoController,
+    MagicAuthController,
+  ],
   providers: [
     // Guards
     JwtAuthGuard,

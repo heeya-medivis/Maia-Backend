@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class MaiaModelResponseDto {
   @ApiProperty()
@@ -19,7 +19,10 @@ export class MaiaModelResponseDto {
   @ApiProperty()
   supportsDeepAnalysis: boolean;
 
-  @ApiProperty({ description: 'Model priority for ordering. Defaults to MAX_SAFE_INTEGER if not set.' })
+  @ApiProperty({
+    description:
+      "Model priority for ordering. Defaults to MAX_SAFE_INTEGER if not set.",
+  })
   modelPriority: number;
 
   @ApiPropertyOptional()

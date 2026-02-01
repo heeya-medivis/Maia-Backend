@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { UserMaiaAccessRepository, UserMaiaAccessRecord } from '../repositories/user-maia-access.repository';
-import { NotFoundException } from '../../../common/exceptions';
+import { Injectable } from "@nestjs/common";
+import {
+  UserMaiaAccessRepository,
+  UserMaiaAccessRecord,
+} from "../repositories/user-maia-access.repository";
+import { NotFoundException } from "../../../common/exceptions";
 
 @Injectable()
 export class UserMaiaAccessService {
@@ -46,18 +49,25 @@ export class UserMaiaAccessService {
 
     if (grantAccess) {
       if (existing?.isActive) {
-        return { message: 'User already has access to this model.' };
+        return { message: "User already has access to this model." };
       }
 
       await this.accessRepository.grantAccess(userId, maiaModelId, adminUserId);
-      return { message: 'Access granted.' };
+      return { message: "Access granted." };
     } else {
       if (!existing) {
-        throw new NotFoundException('User access not found', 'ACCESS_NOT_FOUND');
+        throw new NotFoundException(
+          "User access not found",
+          "ACCESS_NOT_FOUND",
+        );
       }
 
-      await this.accessRepository.revokeAccess(userId, maiaModelId, adminUserId);
-      return { message: 'Access revoked.' };
+      await this.accessRepository.revokeAccess(
+        userId,
+        maiaModelId,
+        adminUserId,
+      );
+      return { message: "Access revoked." };
     }
   }
 }

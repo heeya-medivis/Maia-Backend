@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, isNull } from 'drizzle-orm';
-import { DATABASE_CONNECTION, Database } from '../../../database';
-import { devices, Device, NewDevice } from '../../../database/schema';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and, isNull } from "drizzle-orm";
+import { DATABASE_CONNECTION, Database } from "../../../database";
+import { devices, Device, NewDevice } from "../../../database/schema";
 
 @Injectable()
 export class DevicesRepository {
@@ -23,12 +23,7 @@ export class DevicesRepository {
     const [result] = await this.db
       .select()
       .from(devices)
-      .where(
-        and(
-          eq(devices.id, id),
-          eq(devices.userId, userId),
-        ),
-      )
+      .where(and(eq(devices.id, id), eq(devices.userId, userId)))
       .limit(1);
     return result ?? null;
   }
@@ -37,24 +32,14 @@ export class DevicesRepository {
     return this.db
       .select()
       .from(devices)
-      .where(
-        and(
-          eq(devices.userId, userId),
-          eq(devices.isActive, true),
-        ),
-      );
+      .where(and(eq(devices.userId, userId), eq(devices.isActive, true)));
   }
 
   async findNonRevokedByUserId(userId: string): Promise<Device[]> {
     return this.db
       .select()
       .from(devices)
-      .where(
-        and(
-          eq(devices.userId, userId),
-          isNull(devices.revokedAt),
-        ),
-      );
+      .where(and(eq(devices.userId, userId), isNull(devices.revokedAt)));
   }
 
   async upsert(data: NewDevice): Promise<Device> {
@@ -129,12 +114,7 @@ export class DevicesRepository {
         isActive: false,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(devices.userId, userId),
-          eq(devices.isActive, true),
-        ),
-      )
+      .where(and(eq(devices.userId, userId), eq(devices.isActive, true)))
       .returning({ id: devices.id });
     return result.length;
   }

@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsString, IsNotEmpty, ValidateIf } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsBoolean, IsString, IsNotEmpty, ValidateIf } from "class-validator";
 
 export class MaiaHostStatusUpdateDto {
   @ApiProperty()
@@ -14,6 +14,6 @@ export class MaiaHostStatusUpdateDto {
   @ApiPropertyOptional()
   @ValidateIf((o) => o.isActive === true)
   @IsString()
-  @IsNotEmpty({ message: 'ServerIp is required when activating a host.' })
+  @IsNotEmpty({ message: "ServerIp is required when activating a host." })
   serverIp?: string;
 }

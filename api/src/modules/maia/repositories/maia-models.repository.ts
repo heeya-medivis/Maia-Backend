@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, desc, asc } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
-import { DATABASE_CONNECTION, Database } from '../../../database';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and, desc, asc } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { DATABASE_CONNECTION, Database } from "../../../database";
 import {
   maiaModels,
   MaiaModel,
@@ -10,8 +10,8 @@ import {
   maiaPrompts,
   userMaiaAccess,
   users,
-} from '../../../database/schema';
-import { nanoid } from 'nanoid';
+} from "../../../database/schema";
+import { nanoid } from "nanoid";
 
 export interface MaiaModelWithModifier extends MaiaModel {
   modifiedByName: string | null;
@@ -26,8 +26,8 @@ export class MaiaModelsRepository {
 
   async findAll(): Promise<MaiaModelWithModifier[]> {
     // Create aliases for joining users table twice
-    const modifiedByUser = alias(users, 'modified_by_user');
-    const createdByUser = alias(users, 'created_by_user');
+    const modifiedByUser = alias(users, "modified_by_user");
+    const createdByUser = alias(users, "created_by_user");
 
     const results = await this.db
       .select({
@@ -47,13 +47,15 @@ export class MaiaModelsRepository {
 
     return results.map((r) => {
       // Use modifier name if available, otherwise fall back to creator
-      const modifierName = r.modifiedByFirstName && r.modifiedByLastName
-        ? `${r.modifiedByFirstName} ${r.modifiedByLastName}`
-        : r.modifiedByEmail;
+      const modifierName =
+        r.modifiedByFirstName && r.modifiedByLastName
+          ? `${r.modifiedByFirstName} ${r.modifiedByLastName}`
+          : r.modifiedByEmail;
 
-      const creatorName = r.createdByFirstName && r.createdByLastName
-        ? `${r.createdByFirstName} ${r.createdByLastName}`
-        : r.createdByEmail;
+      const creatorName =
+        r.createdByFirstName && r.createdByLastName
+          ? `${r.createdByFirstName} ${r.createdByLastName}`
+          : r.createdByEmail;
 
       return {
         ...r.model,
@@ -76,7 +78,10 @@ export class MaiaModelsRepository {
       .select()
       .from(maiaModels)
       .where(
-        and(eq(maiaModels.modelName, modelName), eq(maiaModels.isDeleted, false)),
+        and(
+          eq(maiaModels.modelName, modelName),
+          eq(maiaModels.isDeleted, false),
+        ),
       )
       .limit(1);
     return model ?? null;
@@ -122,9 +127,7 @@ export class MaiaModelsRepository {
     const [host] = await this.db
       .select()
       .from(maiaHosts)
-      .where(
-        and(eq(maiaHosts.maiaModelId, id), eq(maiaHosts.isDeleted, false)),
-      )
+      .where(and(eq(maiaHosts.maiaModelId, id), eq(maiaHosts.isDeleted, false)))
       .limit(1);
 
     // Get prompts
@@ -149,7 +152,7 @@ export class MaiaModelsRepository {
     };
   }
 
-  async create(data: Omit<NewMaiaModel, 'id'>): Promise<MaiaModel> {
+  async create(data: Omit<NewMaiaModel, "id">): Promise<MaiaModel> {
     const [model] = await this.db
       .insert(maiaModels)
       .values({
@@ -186,5 +189,53 @@ export class MaiaModelsRepository {
         deletedById,
       })
       .where(eq(maiaModels.id, id));
+  }
+
+  /**
+   * Find all active models with a specific priority
+   * Used for auto-granting access to new users
+   */
+  async findActiveByPriority(priority: number): Promise<MaiaModel[]> {
+    return this.db
+      .select()
+      .from(maiaModels)
+      .where(
+        and(
+          eq(maiaModels.isActive, true),
+          eq(maiaModels.isDeleted, false),
+          eq(maiaModels.modelPriority, priority),
+        ),
+      );
+  }
+
+  /**
+   * Find one active model per category (balanced, thinking, live)
+   * Returns the model with the lowest priority number in each category
+   * Used for auto-granting access when no priority-1 models exist
+   */
+  async findOneActivePerCategory(): Promise<MaiaModel[]> {
+    const categories = ["balanced", "thinking", "live"] as const;
+    const result: MaiaModel[] = [];
+
+    for (const category of categories) {
+      const [model] = await this.db
+        .select()
+        .from(maiaModels)
+        .where(
+          and(
+            eq(maiaModels.isActive, true),
+            eq(maiaModels.isDeleted, false),
+            eq(maiaModels.modelCategory, category),
+          ),
+        )
+        .orderBy(asc(maiaModels.modelPriority))
+        .limit(1);
+
+      if (model) {
+        result.push(model);
+      }
+    }
+
+    return result;
   }
 }

@@ -1,7 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { eq, and, or, like } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
-import { DATABASE_CONNECTION, Database } from '../../../database';
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { DATABASE_CONNECTION, Database } from "../../../database";
 import {
   authConnections,
   AuthConnection,
@@ -9,7 +9,7 @@ import {
   ssoDomains,
   SsoDomain,
   NewSsoDomain,
-} from '../../../database/schema';
+} from "../../../database/schema";
 
 /**
  * Result of enterprise lookup
@@ -63,7 +63,9 @@ export class SsoRepository {
   /**
    * Find connection by WorkOS connection ID
    */
-  async findConnectionByWorkosId(workosConnectionId: string): Promise<AuthConnection | null> {
+  async findConnectionByWorkosId(
+    workosConnectionId: string,
+  ): Promise<AuthConnection | null> {
     const [result] = await this.db
       .select()
       .from(authConnections)
@@ -75,7 +77,9 @@ export class SsoRepository {
   /**
    * Create a new auth connection
    */
-  async createConnection(data: Omit<NewAuthConnection, 'id'>): Promise<AuthConnection> {
+  async createConnection(
+    data: Omit<NewAuthConnection, "id">,
+  ): Promise<AuthConnection> {
     const [result] = await this.db
       .insert(authConnections)
       .values({
@@ -89,7 +93,10 @@ export class SsoRepository {
   /**
    * Update an auth connection
    */
-  async updateConnection(id: string, data: Partial<Omit<AuthConnection, 'id' | 'createdAt'>>): Promise<AuthConnection | null> {
+  async updateConnection(
+    id: string,
+    data: Partial<Omit<AuthConnection, "id" | "createdAt">>,
+  ): Promise<AuthConnection | null> {
     const [result] = await this.db
       .update(authConnections)
       .set({
@@ -166,7 +173,7 @@ export class SsoRepository {
   /**
    * Create a new SSO domain mapping
    */
-  async createDomain(data: Omit<NewSsoDomain, 'id'>): Promise<SsoDomain> {
+  async createDomain(data: Omit<NewSsoDomain, "id">): Promise<SsoDomain> {
     const [result] = await this.db
       .insert(ssoDomains)
       .values({
@@ -181,7 +188,10 @@ export class SsoRepository {
   /**
    * Update an SSO domain
    */
-  async updateDomain(id: string, data: Partial<Omit<SsoDomain, 'id' | 'createdAt'>>): Promise<SsoDomain | null> {
+  async updateDomain(
+    id: string,
+    data: Partial<Omit<SsoDomain, "id" | "createdAt">>,
+  ): Promise<SsoDomain | null> {
     const updateData = { ...data, updatedAt: new Date() };
     if (data.domain) {
       updateData.domain = data.domain.toLowerCase().trim();
@@ -213,24 +223,26 @@ export class SsoRepository {
    * Check if an email belongs to an enterprise domain
    * Returns the connection and domain info if found
    */
-  async lookupEnterpriseByEmail(email: string): Promise<EnterpriseLookupResult> {
+  async lookupEnterpriseByEmail(
+    email: string,
+  ): Promise<EnterpriseLookupResult> {
     const emailLower = email.toLowerCase().trim();
-    const atIndex = emailLower.indexOf('@');
-    
+    const atIndex = emailLower.indexOf("@");
+
     if (atIndex === -1) {
       return { isEnterprise: false };
     }
 
     const domain = emailLower.substring(atIndex + 1);
-    
+
     // Try exact domain match first
     let ssoDomain = await this.findDomainByName(domain);
-    
+
     // If no exact match, try parent domains (e.g., stern.nyu.edu -> nyu.edu)
     if (!ssoDomain) {
-      const domainParts = domain.split('.');
+      const domainParts = domain.split(".");
       for (let i = 1; i < domainParts.length - 1; i++) {
-        const parentDomain = domainParts.slice(i).join('.');
+        const parentDomain = domainParts.slice(i).join(".");
         ssoDomain = await this.findDomainByName(parentDomain);
         if (ssoDomain) break;
       }
@@ -243,7 +255,7 @@ export class SsoRepository {
     // Check email pattern if configured
     if (ssoDomain.emailPattern) {
       try {
-        const pattern = new RegExp(ssoDomain.emailPattern, 'i');
+        const pattern = new RegExp(ssoDomain.emailPattern, "i");
         if (!pattern.test(emailLower)) {
           return { isEnterprise: false };
         }
@@ -268,14 +280,19 @@ export class SsoRepository {
   /**
    * Get SSO domains with their connection info (for admin UI)
    */
-  async findDomainsWithConnections(): Promise<Array<SsoDomain & { connection: AuthConnection }>> {
+  async findDomainsWithConnections(): Promise<
+    Array<SsoDomain & { connection: AuthConnection }>
+  > {
     const domains = await this.db
       .select({
         domain: ssoDomains,
         connection: authConnections,
       })
       .from(ssoDomains)
-      .innerJoin(authConnections, eq(ssoDomains.connectionId, authConnections.id));
+      .innerJoin(
+        authConnections,
+        eq(ssoDomains.connectionId, authConnections.id),
+      );
 
     return domains.map((d) => ({
       ...d.domain,

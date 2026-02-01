@@ -1,19 +1,19 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { User } from '../../../database/schema';
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import { User } from "../../../database/schema";
 
 /**
  * Parameter decorator that extracts the current authenticated user from the request.
- * 
+ *
  * The JwtAuthGuard stores:
  * - request.user = AuthUser (minimal auth info: id, email, isAdmin, sessionId, deviceId)
  * - request.dbUser = Full User record from database (includes firstName, lastName, organization, role, etc.)
- * 
+ *
  * This decorator returns the full User record (dbUser) for use in controllers.
- * 
+ *
  * @example
  * // Get full user
  * @CurrentUser() user: User
- * 
+ *
  * // Get specific field
  * @CurrentUser('email') email: string
  */

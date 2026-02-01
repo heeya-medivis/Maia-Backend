@@ -1,16 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsDateString, IsInt, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString, IsDateString, IsInt, Min } from "class-validator";
 
 /**
  * Request: Create a new session
  * POST /api/maia/session
  */
 export class CreateSessionDto {
-  @ApiProperty({ description: 'Provider session ID (e.g., Gemini session ID)' })
+  @ApiProperty({ description: "Provider session ID (e.g., Gemini session ID)" })
   @IsString()
   providerSessionId: string;
 
-  @ApiProperty({ description: 'Session start time' })
+  @ApiProperty({ description: "Session start time" })
   @IsDateString()
   startTime: string;
 }
@@ -19,7 +19,7 @@ export class CreateSessionDto {
  * Response: Session created
  */
 export class CreateSessionResponseDto {
-  @ApiProperty({ description: 'Our backend session ID' })
+  @ApiProperty({ description: "Our backend session ID" })
   sessionId: string;
 }
 
@@ -28,64 +28,64 @@ export class CreateSessionResponseDto {
  * POST /api/maia/session/:sessionId/turn
  */
 export class CreateTurnDto {
-  @ApiProperty({ description: 'Session ID' })
+  @ApiProperty({ description: "Session ID" })
   @IsString()
   sessionId: string;
 
-  @ApiProperty({ description: 'Request timestamp' })
+  @ApiProperty({ description: "Request timestamp" })
   @IsDateString()
   requestTime: string;
 
-  @ApiProperty({ description: 'Response timestamp' })
+  @ApiProperty({ description: "Response timestamp" })
   @IsDateString()
   responseTime: string;
 
-  @ApiProperty({ description: 'Input text tokens' })
+  @ApiProperty({ description: "Input text tokens" })
   @IsInt()
   @Min(0)
   inputTextTokens: number;
 
-  @ApiProperty({ description: 'Input image tokens' })
+  @ApiProperty({ description: "Input image tokens" })
   @IsInt()
   @Min(0)
   inputImageTokens: number;
 
-  @ApiProperty({ description: 'Input audio tokens' })
+  @ApiProperty({ description: "Input audio tokens" })
   @IsInt()
   @Min(0)
   inputAudioTokens: number;
 
-  @ApiProperty({ description: 'Input text cached tokens' })
+  @ApiProperty({ description: "Input text cached tokens" })
   @IsInt()
   @Min(0)
   inputTextCachedTokens: number;
 
-  @ApiProperty({ description: 'Input image cached tokens' })
+  @ApiProperty({ description: "Input image cached tokens" })
   @IsInt()
   @Min(0)
   inputImageCachedTokens: number;
 
-  @ApiProperty({ description: 'Input audio cached tokens' })
+  @ApiProperty({ description: "Input audio cached tokens" })
   @IsInt()
   @Min(0)
   inputAudioCachedTokens: number;
 
-  @ApiProperty({ description: 'Output text tokens' })
+  @ApiProperty({ description: "Output text tokens" })
   @IsInt()
   @Min(0)
   outputTextTokens: number;
 
-  @ApiProperty({ description: 'Output image tokens' })
+  @ApiProperty({ description: "Output image tokens" })
   @IsInt()
   @Min(0)
   outputImageTokens: number;
 
-  @ApiProperty({ description: 'Output audio tokens' })
+  @ApiProperty({ description: "Output audio tokens" })
   @IsInt()
   @Min(0)
   outputAudioTokens: number;
 
-  @ApiProperty({ description: 'Output reasoning tokens' })
+  @ApiProperty({ description: "Output reasoning tokens" })
   @IsInt()
   @Min(0)
   outputReasoningTokens: number;

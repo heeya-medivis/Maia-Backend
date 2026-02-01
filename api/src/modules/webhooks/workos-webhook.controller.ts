@@ -6,13 +6,13 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { Request } from 'express';
-import { WorkOSWebhookService } from './workos-webhook.service';
+} from "@nestjs/common";
+import { ApiTags, ApiOperation } from "@nestjs/swagger";
+import { Request } from "express";
+import { WorkOSWebhookService } from "./workos-webhook.service";
 
-@ApiTags('Webhooks')
-@Controller('webhooks/workos')
+@ApiTags("Webhooks")
+@Controller("webhooks/workos")
 export class WorkOSWebhookController {
   private readonly logger = new Logger(WorkOSWebhookController.name);
 
@@ -20,21 +20,24 @@ export class WorkOSWebhookController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Handle WorkOS webhook events' })
+  @ApiOperation({ summary: "Handle WorkOS webhook events" })
   async handleWebhook(
     @Req() req: Request,
-    @Headers('workos-signature') signature: string,
+    @Headers("workos-signature") signature: string,
   ) {
     // Get raw body - need to configure Express to preserve it
     const payload =
-      typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      typeof req.body === "string" ? req.body : JSON.stringify(req.body);
 
     if (!signature) {
-      this.logger.warn('Webhook received without signature');
-      return { received: false, error: 'Missing signature' };
+      this.logger.warn("Webhook received without signature");
+      return { received: false, error: "Missing signature" };
     }
 
-    const event = await this.workosWebhookService.verifyWebhook(payload, signature);
+    const event = await this.workosWebhookService.verifyWebhook(
+      payload,
+      signature,
+    );
 
     try {
       await this.workosWebhookService.handleEvent(event);

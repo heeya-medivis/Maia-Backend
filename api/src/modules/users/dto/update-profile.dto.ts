@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from "class-validator";
 
 /**
  * DTO for users updating their own profile.

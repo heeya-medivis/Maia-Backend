@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { MaiaPromptsRepository } from '../repositories/maia-prompts.repository';
-import { MaiaPromptDto } from '../dto';
-import { NotFoundException, BadRequestException } from '../../../common/exceptions';
-import { MaiaPrompt, PromptType } from '../../../database/schema';
+import { Injectable } from "@nestjs/common";
+import { MaiaPromptsRepository } from "../repositories/maia-prompts.repository";
+import { MaiaPromptDto } from "../dto";
+import { NotFoundException } from "../../../common/exceptions";
+import { MaiaPrompt, PromptType } from "../../../database/schema";
 
 @Injectable()
 export class MaiaPromptsService {
@@ -11,7 +11,7 @@ export class MaiaPromptsService {
   async findById(id: string): Promise<MaiaPrompt> {
     const prompt = await this.promptsRepository.findById(id);
     if (!prompt) {
-      throw new NotFoundException('Prompt not found', 'PROMPT_NOT_FOUND');
+      throw new NotFoundException("Prompt not found", "PROMPT_NOT_FOUND");
     }
     return prompt;
   }
@@ -61,7 +61,7 @@ export class MaiaPromptsService {
   ): Promise<MaiaPrompt> {
     const prompt = await this.promptsRepository.findById(promptId);
     if (!prompt) {
-      throw new NotFoundException('Prompt not found', 'PROMPT_NOT_FOUND');
+      throw new NotFoundException("Prompt not found", "PROMPT_NOT_FOUND");
     }
 
     const promptType = this.mapPromptType(data.type);
@@ -69,10 +69,11 @@ export class MaiaPromptsService {
     // If activating, deactivate other prompts of same type (excluding this one)
     if (data.isActive) {
       // Deactivate all OTHER active prompts of the same type
-      const activePrompt = await this.promptsRepository.findActiveByModelIdAndType(
-        prompt.maiaModelId,
-        promptType,
-      );
+      const activePrompt =
+        await this.promptsRepository.findActiveByModelIdAndType(
+          prompt.maiaModelId,
+          promptType,
+        );
       if (activePrompt && activePrompt.id !== promptId) {
         await this.promptsRepository.update(
           activePrompt.id,
@@ -102,7 +103,7 @@ export class MaiaPromptsService {
   async softDelete(promptId: string, deletedById: string): Promise<void> {
     const prompt = await this.promptsRepository.findById(promptId);
     if (!prompt) {
-      throw new NotFoundException('Prompt not found', 'PROMPT_NOT_FOUND');
+      throw new NotFoundException("Prompt not found", "PROMPT_NOT_FOUND");
     }
 
     await this.promptsRepository.softDelete(promptId, deletedById);
@@ -111,11 +112,11 @@ export class MaiaPromptsService {
   private mapPromptType(type: number): PromptType {
     switch (type) {
       case 1:
-        return 'system_prompt';
+        return "system_prompt";
       case 2:
-        return 'analysis_prompt';
+        return "analysis_prompt";
       default:
-        return 'invalid';
+        return "invalid";
     }
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   AdminUsageRepository,
   OverallStats,
@@ -6,7 +6,7 @@ import {
   OrganizationUsageStats,
   UserDetailData,
   OrganizationDetailData,
-} from '../repositories/admin-usage.repository';
+} from "../repositories/admin-usage.repository";
 
 @Injectable()
 export class AdminUsageService {
@@ -15,21 +15,30 @@ export class AdminUsageService {
   /**
    * Get overall usage statistics
    */
-  async getOverallStats(startDate?: Date, endDate?: Date): Promise<OverallStats> {
+  async getOverallStats(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<OverallStats> {
     return this.repository.getOverallStats(startDate, endDate);
   }
 
   /**
    * Get usage statistics grouped by user
    */
-  async getUsageByUser(startDate?: Date, endDate?: Date): Promise<UserUsageStats[]> {
+  async getUsageByUser(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<UserUsageStats[]> {
     return this.repository.getUsageByUser(startDate, endDate);
   }
 
   /**
    * Get usage statistics grouped by organization
    */
-  async getUsageByOrganization(startDate?: Date, endDate?: Date): Promise<OrganizationUsageStats[]> {
+  async getUsageByOrganization(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<OrganizationUsageStats[]> {
     return this.repository.getUsageByOrganization(startDate, endDate);
   }
 
@@ -43,7 +52,9 @@ export class AdminUsageService {
   /**
    * Get detailed usage data for a specific organization
    */
-  async getOrganizationDetail(organizationName: string): Promise<OrganizationDetailData | null> {
+  async getOrganizationDetail(
+    organizationName: string,
+  ): Promise<OrganizationDetailData | null> {
     return this.repository.getOrganizationDetail(organizationName);
   }
 }

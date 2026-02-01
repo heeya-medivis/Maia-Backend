@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsBoolean, IsString, IsNotEmpty, IsEnum } from "class-validator";
 
 export enum PromptType {
   Invalid = 0,

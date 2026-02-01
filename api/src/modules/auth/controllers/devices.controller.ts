@@ -8,21 +8,21 @@ import {
   UseGuards,
   NotFoundException,
   ForbiddenException,
-} from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
-import { CurrentUser } from '../decorators/current-user.decorator';
-import { DevicesRepository } from '../repositories/devices.repository';
-import { SessionService } from '../services/session.service';
-import { type AuthUser } from '../../../common';
+} from "@nestjs/common";
+import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../guards/jwt-auth.guard";
+import { CurrentUser } from "../decorators/current-user.decorator";
+import { DevicesRepository } from "../repositories/devices.repository";
+import { SessionService } from "../services/session.service";
+import { type AuthUser } from "../../../common";
 
 class UpdateDeviceDto {
   name?: string;
 }
 
-@ApiTags('Devices')
+@ApiTags("Devices")
 @ApiBearerAuth()
-@Controller('devices')
+@Controller("devices")
 @UseGuards(JwtAuthGuard)
 export class DevicesController {
   constructor(
@@ -34,9 +34,11 @@ export class DevicesController {
    * GET /devices - List user's devices
    */
   @Get()
-  @ApiOperation({ summary: 'List all devices for current user' })
+  @ApiOperation({ summary: "List all devices for current user" })
   async listDevices(@CurrentUser() user: AuthUser) {
-    const userDevices = await this.devicesRepository.findNonRevokedByUserId(user.id);
+    const userDevices = await this.devicesRepository.findNonRevokedByUserId(
+      user.id,
+    );
 
     return {
       devices: userDevices.map((d) => ({
@@ -57,13 +59,19 @@ export class DevicesController {
   /**
    * GET /devices/:id - Get device details
    */
-  @Get(':id')
-  @ApiOperation({ summary: 'Get device details' })
-  async getDevice(@CurrentUser() user: AuthUser, @Param('id') deviceId: string) {
-    const device = await this.devicesRepository.findByIdAndUserId(deviceId, user.id);
+  @Get(":id")
+  @ApiOperation({ summary: "Get device details" })
+  async getDevice(
+    @CurrentUser() user: AuthUser,
+    @Param("id") deviceId: string,
+  ) {
+    const device = await this.devicesRepository.findByIdAndUserId(
+      deviceId,
+      user.id,
+    );
 
     if (!device) {
-      throw new NotFoundException('Device not found');
+      throw new NotFoundException("Device not found");
     }
 
     return {
@@ -85,17 +93,20 @@ export class DevicesController {
   /**
    * PATCH /devices/:id - Update device info
    */
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update device info' })
+  @Patch(":id")
+  @ApiOperation({ summary: "Update device info" })
   async updateDevice(
     @CurrentUser() user: AuthUser,
-    @Param('id') deviceId: string,
+    @Param("id") deviceId: string,
     @Body() dto: UpdateDeviceDto,
   ) {
-    const device = await this.devicesRepository.findByIdAndUserId(deviceId, user.id);
+    const device = await this.devicesRepository.findByIdAndUserId(
+      deviceId,
+      user.id,
+    );
 
     if (!device) {
-      throw new NotFoundException('Device not found');
+      throw new NotFoundException("Device not found");
     }
 
     await this.devicesRepository.update(deviceId, {
@@ -104,25 +115,33 @@ export class DevicesController {
 
     return {
       success: true,
-      message: 'Device updated',
+      message: "Device updated",
     };
   }
 
   /**
    * DELETE /devices/:id - Revoke device
    */
-  @Delete(':id')
-  @ApiOperation({ summary: 'Revoke device access' })
-  async revokeDevice(@CurrentUser() user: AuthUser, @Param('id') deviceId: string) {
+  @Delete(":id")
+  @ApiOperation({ summary: "Revoke device access" })
+  async revokeDevice(
+    @CurrentUser() user: AuthUser,
+    @Param("id") deviceId: string,
+  ) {
     // Can't revoke current device
     if (deviceId === user.deviceId) {
-      throw new ForbiddenException('Cannot revoke current device. Use logout instead.');
+      throw new ForbiddenException(
+        "Cannot revoke current device. Use logout instead.",
+      );
     }
 
-    const device = await this.devicesRepository.findByIdAndUserId(deviceId, user.id);
+    const device = await this.devicesRepository.findByIdAndUserId(
+      deviceId,
+      user.id,
+    );
 
     if (!device) {
-      throw new NotFoundException('Device not found');
+      throw new NotFoundException("Device not found");
     }
 
     // Revoke all sessions for this device
@@ -133,7 +152,7 @@ export class DevicesController {
 
     return {
       success: true,
-      message: 'Device revoked',
+      message: "Device revoked",
     };
   }
 }

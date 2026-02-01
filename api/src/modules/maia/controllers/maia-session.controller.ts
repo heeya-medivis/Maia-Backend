@@ -7,17 +7,17 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { MaiaSessionService } from '../services/maia-session.service';
+} from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { MaiaSessionService } from "../services/maia-session.service";
 import {
   CreateSessionDto,
   CreateSessionResponseDto,
   CreateTurnDto,
-} from '../dto/maia-session.dto';
-import { User } from '../../../database/schema';
+} from "../dto/maia-session.dto";
+import { User } from "../../../database/schema";
 
 /**
  * MAIA Session Controller
@@ -30,9 +30,9 @@ import { User } from '../../../database/schema';
  * - GET  /api/maia/session                - Get all sessions for current user
  * - GET  /api/maia/session/:sessionId     - Get a specific session with turns
  */
-@ApiTags('MAIA Session')
+@ApiTags("MAIA Session")
 @ApiBearerAuth()
-@Controller('api/maia/session')
+@Controller("api/maia/session")
 @UseGuards(JwtAuthGuard)
 export class MaiaSessionController {
   constructor(private readonly sessionService: MaiaSessionService) {}
@@ -43,7 +43,7 @@ export class MaiaSessionController {
    * Called by Unity when a session starts
    */
   @Post()
-  @ApiOperation({ summary: 'Create a new session' })
+  @ApiOperation({ summary: "Create a new session" })
   async createSession(
     @CurrentUser() user: User,
     @Body() dto: CreateSessionDto,
@@ -64,12 +64,12 @@ export class MaiaSessionController {
    * Record a turn (request/response pair) with token usage
    * Called by Unity after each model response
    */
-  @Post(':sessionId/turn')
+  @Post(":sessionId/turn")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Record a turn with token usage' })
+  @ApiOperation({ summary: "Record a turn with token usage" })
   async createTurn(
     @CurrentUser() user: User,
-    @Param('sessionId') sessionId: string,
+    @Param("sessionId") sessionId: string,
     @Body() dto: CreateTurnDto,
   ): Promise<{ success: boolean }> {
     await this.sessionService.createTurn(sessionId, user.id, {
@@ -95,12 +95,12 @@ export class MaiaSessionController {
    * End a session
    * Called by Unity when a session ends
    */
-  @Post(':sessionId/end')
+  @Post(":sessionId/end")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'End a session' })
+  @ApiOperation({ summary: "End a session" })
   async endSession(
     @CurrentUser() user: User,
-    @Param('sessionId') sessionId: string,
+    @Param("sessionId") sessionId: string,
   ): Promise<{ success: boolean }> {
     await this.sessionService.endSession(sessionId, user.id);
     return { success: true };
@@ -111,7 +111,7 @@ export class MaiaSessionController {
    * Get all sessions for current user
    */
   @Get()
-  @ApiOperation({ summary: 'Get all sessions for current user' })
+  @ApiOperation({ summary: "Get all sessions for current user" })
   async getUserSessions(@CurrentUser() user: User) {
     return this.sessionService.getUserSessions(user.id);
   }
@@ -120,9 +120,9 @@ export class MaiaSessionController {
    * GET /api/maia/session/:sessionId
    * Get a specific session with all turns
    */
-  @Get(':sessionId')
-  @ApiOperation({ summary: 'Get session details with turns' })
-  async getSession(@Param('sessionId') sessionId: string) {
+  @Get(":sessionId")
+  @ApiOperation({ summary: "Get session details with turns" })
+  async getSession(@Param("sessionId") sessionId: string) {
     return this.sessionService.getSessionWithTurns(sessionId);
   }
 }

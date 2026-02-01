@@ -1,16 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsDateString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsDateString } from "class-validator";
 
 /**
  * Query parameters for date range filtering
  */
 export class DateRangeQueryDto {
-  @ApiPropertyOptional({ description: 'Start date (ISO 8601)' })
+  @ApiPropertyOptional({ description: "Start date (ISO 8601)" })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({ description: 'End date (ISO 8601)' })
+  @ApiPropertyOptional({ description: "End date (ISO 8601)" })
   @IsOptional()
   @IsDateString()
   endDate?: string;

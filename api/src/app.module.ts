@@ -1,16 +1,16 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from './config';
-import { DatabaseModule } from './database';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "./config";
+import { DatabaseModule } from "./database";
 
 // Feature modules
-import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { WebhooksModule } from './modules/webhooks/webhooks.module';
-import { MaiaModule } from './modules/maia/maia.module';
-import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
-import { AdminUsageModule } from './modules/admin-usage/admin-usage.module';
+import { AuthModule } from "./modules/auth/auth.module";
+import { UsersModule } from "./modules/users/users.module";
+import { WebhooksModule } from "./modules/webhooks/webhooks.module";
+import { MaiaModule } from "./modules/maia/maia.module";
+import { AiProvidersModule } from "./modules/ai-providers/ai-providers.module";
+import { AdminUsageModule } from "./modules/admin-usage/admin-usage.module";
 
-import { HealthController } from './health.controller';
+import { HealthController } from "./health.controller";
 
 @Module({
   imports: [
