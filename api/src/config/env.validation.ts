@@ -97,6 +97,9 @@ export const envSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .default("http://localhost:3000,http://localhost:3001"),
+
+  // Admin Seeding (optional)
+  ADMIN_SEED_EMAIL: z.string().email().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

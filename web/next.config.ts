@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 import path from "path";
 import dotenv from "dotenv";
 
-// Load environment variables from monorepo root .env file
-dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+// Load environment variables from local .env file
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const nextConfig: NextConfig = {
   turbopack: {

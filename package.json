@@ -4,9 +4,9 @@
   "private": true,
   "description": "Maia - SurgicalAR Backend & Web Frontend",
   "scripts": {
-    "dev": "dotenv -e .env -- concurrently \"npm run dev:api\" \"npm run dev:web\"",
-    "dev:api": "dotenv -e .env -- npm run start:dev --prefix api",
-    "dev:web": "dotenv -e .env -- npm run dev --prefix web",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd api && npm run start:dev",
+    "dev:web": "cd web && npm run dev",
     "build": "npm run build:api && npm run build:web",
     "build:api": "npm run build --prefix api",
     "build:web": "npm run build --prefix web",

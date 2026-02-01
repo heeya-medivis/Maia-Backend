@@ -6,7 +6,7 @@ import { validateEnv } from "./env.validation";
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ["../.env", ".env"],
+      envFilePath: ".env",
       validate: validateEnv,
     }),
   ],
